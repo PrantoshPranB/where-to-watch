@@ -228,6 +228,26 @@ kbd{font:inherit;border:1.5px solid var(--hair);border-radius:3px;padding:2px 5p
 .sync-card{padding:20px 22px;border:2px solid var(--line);border-radius:6px;background:var(--paper);margin-bottom:18px}
 .sync-card .who{font:400 28px/1.1 var(--display);margin:6px 0}
 
+/* match details */
+.match{flex-wrap:wrap}
+.match .n.click{cursor:pointer}
+.match .n.click:hover{color:var(--red)}
+.mdetail{flex-basis:100%;margin:12px 0 4px 54px;padding:14px 16px;background:var(--soft);border-left:3px solid var(--gold);font-size:15px}
+.mdetail .facts{font:600 12px/1.5 var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
+.mdetail p{margin:0 0 10px}
+.mdetail .people{margin-bottom:10px}
+.mdetail ul{margin:4px 0 12px;padding-left:18px}
+.mdetail li{margin-bottom:3px}
+.mdetail h4{font:600 11px/1 var(--mono);letter-spacing:.16em;text-transform:uppercase;color:var(--muted);margin:12px 0 6px}
+.cert{display:inline-block;border:1.5px solid currentColor;border-radius:3px;padding:1px 5px;margin-right:2px}
+.btn.on{background:var(--good);border-color:var(--good);color:#FFF4E2}
+
+/* watchlist tab */
+.wfilters{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 16px}
+.wl-item .new{font:600 10px/1 var(--mono);letter-spacing:.14em;text-transform:uppercase;background:var(--gold);color:#17110C;padding:3px 6px 2px;border-radius:2px;margin-right:6px;vertical-align:1px}
+.wl-item .ready{border-left:3px solid var(--good);padding-left:10px;margin-left:-13px}
+.tabs .num{font-size:10px;background:var(--gold);color:#17110C;border-radius:999px;padding:2px 6px;margin-left:6px}
+
 /* watchlist */
 .wl{border-top:2px solid var(--ink)}
 .wl-item{display:flex;align-items:center;gap:14px;padding:12px 0;border-bottom:1px dashed var(--hair)}
@@ -253,7 +273,8 @@ footer{margin-top:56px;padding-top:16px;border-top:2px solid var(--ink);font:500
   .pick-poster{border-right:2px solid #17110C;border-bottom:2px solid #17110C;align-self:start}
   .pick-body{padding:14px 16px}
   .pick-title{font-size:26px}
-  .wl-item{flex-wrap:wrap}.wl-item .go,.match .acts{margin-left:54px}
+  .wl-item{flex-wrap:wrap}.wl-item .go,.match .acts,.wl-item .acts{margin-left:54px}
+  .mdetail{margin-left:0}
   .taste-cols{grid-template-columns:1fr}
   .rate-btns{gap:5px}.rbtn{font-size:10px;letter-spacing:.02em}
 }
@@ -273,6 +294,7 @@ footer{margin-top:56px;padding-top:16px;border-top:2px solid var(--ink);font:500
   <nav class="tabs" id="tabs" hidden aria-label="Sections">
     <button type="button" data-go="search">Find a film</button>
     <button type="button" data-go="suggest">For you</button>
+    <button type="button" data-go="watch">Watchlist<span class="num" id="wlCount" hidden></span></button>
   </nav>
 
   <!-- Step 1: about you -->
@@ -341,6 +363,13 @@ footer{margin-top:56px;padding-top:16px;border-top:2px solid var(--ink);font:500
     <div id="syncBody"></div>
   </section>
 
+  <!-- Watchlist -->
+  <section id="view-watch" hidden>
+    <p class="kicker">Watchlist</p>
+    <h1>Saved for later.</h1>
+    <div id="watchBody"></div>
+  </section>
+
   <!-- Taste test, step 1: genres -->
   <section id="view-quiz" hidden>
     <p class="kicker">Taste test · step 1</p>
@@ -395,7 +424,7 @@ footer{margin-top:56px;padding-top:16px;border-top:2px solid var(--ink);font:500
   // Each profile is one JSON file in a private GitHub repo, written with the GitHub contents API.
   // The token stays on each device; everything else in SYNC_KEYS travels. Every key carries the time
   // it last changed, so the newer value wins, and ratings from two devices are combined, not replaced.
-  const SYNC_KEYS = ["name", "key", "gkey", "subs", "taste"];
+  const SYNC_KEYS = ["name", "key", "gkey", "subs", "taste", "wl"];
   const DEFAULT_REPO = "PrantoshPranB/where-to-watch-data";
   var syncCfg = store.get("sync", null), pushTimer = null, syncBusy = null, lastSync = 0, syncError = "";
 
@@ -434,11 +463,26 @@ footer{margin-top:56px;padding-top:16px;border-top:2px solid var(--ink);font:500
       gHist: [...new Map(hist.map(h => [h.id, h])).values()], resetAt: Math.max(n.resetAt || 0, o.resetAt || 0) };
   }
 
+  // watchlists combine; a removal wins over any copy added before it, so deleted films stay deleted
+  function mergeWl(a, b){
+    const removed = { ...(a.removed || {}) };
+    Object.entries(b.removed || {}).forEach(([k, t]) => removed[k] = Math.max(removed[k] || 0, t));
+    const items = {};
+    [a.items || {}, b.items || {}].forEach(src => Object.entries(src).forEach(([k, it]) => {
+      const cur = items[k];
+      if (!cur) items[k] = it;
+      else items[k] = (it.checked || 0) > (cur.checked || 0) ? { ...it, added: Math.min(cur.added, it.added) } : cur;
+    }));
+    Object.keys(items).forEach(k => { if ((removed[k] || 0) >= items[k].added) delete items[k]; });
+    return { items, removed };
+  }
+
   function merge(local, remote){
     const lm = local.meta || {}, rm = remote.meta || {}, data = {}, meta = {};
     SYNC_KEYS.forEach(k => {
       const tl = lm[k] || 0, tr = rm[k] || 0, lv = local.data[k], rv = remote.data[k];
-      const v = k === "taste" && lv && rv ? mergeTaste(lv, rv, tl, tr) : tr > tl ? rv : lv !== undefined ? lv : rv;
+      const v = k === "taste" && lv && rv ? mergeTaste(lv, rv, tl, tr) : k === "wl" && lv && rv ? mergeWl(lv, rv)
+        : tr > tl ? rv : lv !== undefined ? lv : rv;
       if (v !== undefined) data[k] = v;
       if (tl || tr) meta[k] = Math.max(tl, tr);
     });
@@ -493,6 +537,7 @@ footer{margin-top:56px;padding-top:16px;border-top:2px solid var(--ink);font:500
   function refreshFromStore(){
     state.name = store.get("name", ""); state.key = store.get("key", ""); state.gkey = store.get("gkey", ""); state.subs = store.get("subs", []);
     taste = store.get("taste", taste);
+    wl = store.get("wl", wl); updateWlCount();
   }
 
   const ago = t => { const s = Math.round((Date.now() - t) / 1000); return s < 60 ? "just now" : s < 3600 ? Math.round(s / 60) + " min ago" : Math.round(s / 3600) + " h ago"; };
@@ -693,9 +738,9 @@ footer{margin-top:56px;padding-top:16px;border-top:2px solid var(--ink);font:500
   }
   function show(v){
     setTicker();
-    ["setup","apps","search","quiz","suggest","sync"].forEach(x => $("#view-"+x).hidden = x !== v);
+    ["setup","apps","search","quiz","suggest","sync","watch"].forEach(x => $("#view-"+x).hidden = x !== v);
     const ready = state.key && state.subs.length;
-    const main = ["search","quiz","suggest"].includes(v);
+    const main = ["search","quiz","suggest","watch"].includes(v);
     $("#hello").hidden = $("#tabs").hidden = !ready || !main;
     document.querySelectorAll("#tabs button").forEach(b => {
       if (b.dataset.go === (v === "quiz" ? "suggest" : v)) b.setAttribute("aria-current", "page"); else b.removeAttribute("aria-current");
@@ -1114,6 +1159,7 @@ Give at most 10 links, best first, and link to the page where the video actually
 
     body += `<div class="row" style="margin-top:18px">
       ${IN.link ? `<a class="btn tiny" href="${esc(IN.link)}" target="_blank" rel="noopener">Open watch links</a>` : ""}
+      ${wlButton(m, "btnWlTicket")}
       <button class="btn alt tiny" id="btnBack">Pick a different ${noun(m.kind)}</button>
     </div>
     <p class="small" style="margin-top:12px">"Open watch links" goes to the India listing with direct links into each app. Check the price in the app before paying for anything.</p>`;
@@ -1126,6 +1172,7 @@ Give at most 10 links, best first, and link to the page where the video actually
     </article>`;
     const back = $("#btnBack");
     if (back) back.addEventListener("click", () => { $("#result").innerHTML = ""; $("#optionsWrap").hidden = !candidates.length; $("#inQuery").focus(); });
+    $("#btnWlTicket").addEventListener("click", e => wlToggle(m, e.currentTarget));
     return !mine.length && !free.length;
   }
 
@@ -1338,6 +1385,7 @@ Give at most 10 links, best first, and link to the page where the video actually
       if (act === "unseen") return askWant();
       if (act === "want" || act === "nowant"){
         ans[m.id] = { seen: false, want: act === "want" };
+        if (act === "want") wlAdd({ ...m, kind: "movie" });
         if (act === "nowant") taste.skip.push(m.id);
         saveTaste(); renderProgress(); current = null; return leave(act === "want" ? "out-r" : "out-l");
       }
@@ -1486,13 +1534,14 @@ Give at most 10 links, best first, and link to the page where the video actually
       return `<div class="wl-item match" data-i="${i}">
         <img src="${IMG}w92${m.poster_path}" alt="" loading="lazy">
         <div>
-          <div class="n">${esc(m.title)}</div>
+          <div class="n click" data-m="more">${esc(m.title)}</div>
           <div class="tag"><span class="pct">${pct}% match</span> · ${esc([(m.release_date || "").slice(0,4), langName(m.original_language || "")].filter(Boolean).join(" · "))}</div>
           <div class="why">${esc(why)}</div>
           <div class="where" data-where="${m.id}"></div>
         </div>
         <div class="acts">
-          <button type="button" class="btn alt tiny" data-m="find">Where to watch</button>
+          <button type="button" class="btn alt tiny" data-m="more" aria-expanded="false">Details</button>
+          ${wlButton({ ...m, kind: "movie" })}
           <button type="button" class="btn alt tiny" data-m="seen">Seen it</button>
         </div>
       </div>`;
@@ -1522,9 +1571,16 @@ Give at most 10 links, best first, and link to the page where the video actually
         return lookup({ ...unbrief(pk.id, pk), kind: "movie" });
       }
     }
+    const wb = e.target.closest("[data-wl]");
+    if (wb){
+      const row = wb.closest(".match"), pk = wb.dataset.wl;
+      const m = row ? matches[+row.dataset.i].m : (() => { const p = taste.gemini.picks.find(x => "movie:" + x.id === pk); return { ...unbrief(p.id, p), kind: "movie" }; })();
+      return wlToggle({ ...m, kind: "movie" }, wb);
+    }
     const row = e.target.closest(".match"); if (!row) return;
     const c = matches[+row.dataset.i], m = c.m;
     const b = e.target.closest("[data-m]"), r = e.target.closest("[data-rate]");
+    if (b && b.dataset.m === "more") return toggleDetail(row, c);
     if (b && b.dataset.m === "find"){
       show("search"); candidates = []; $("#optionsWrap").hidden = true; $("#searchMsg").innerHTML = "";
       lookup({ ...m, kind: "movie" });
@@ -1536,6 +1592,168 @@ Give at most 10 links, best first, and link to the page where the video actually
       showTaste(false);
     }
   });
+
+  // ---------- watchlist ----------
+  // Items are keyed "movie:123" / "tv:456". Removals are remembered with a time so sync doesn't bring them back.
+  let wl = store.get("wl", { items: {}, removed: {} });
+  const wkey = m => `${m.kind || "movie"}:${m.id}`;
+  const inWl = m => wkey(m) in wl.items;
+  const saveWl = () => { store.set("wl", wl); updateWlCount(); };
+  function wlAdd(m){
+    if (inWl(m)) return;
+    wl.items[wkey(m)] = { id: m.id, kind: m.kind || "movie", t: m.title, ot: m.original_title || "", d: m.release_date || "", p: m.poster_path || "",
+      l: m.original_language || "", g: m.genre_ids || (m.genres || []).map(g => g.id), added: Date.now() };
+    saveWl();
+  }
+  function wlRemove(k){ delete wl.items[k]; wl.removed[k] = Date.now(); saveWl(); }
+  function wlButton(m, id){
+    const on = inWl(m);
+    return `<button type="button" class="btn alt tiny${on ? " on" : ""}" ${id ? `id="${id}"` : ""} data-wl="${wkey(m)}" aria-pressed="${on}">${on ? "✓ On watchlist" : "+ Watchlist"}</button>`;
+  }
+  function wlToggle(m, btn){
+    inWl(m) ? wlRemove(wkey(m)) : wlAdd(m);
+    const on = inWl(m);
+    btn.classList.toggle("on", on); btn.setAttribute("aria-pressed", on); btn.textContent = on ? "✓ On watchlist" : "+ Watchlist";
+  }
+  const readyNow = it => it.avail && (it.avail.mine.length || it.avail.free.length);
+  function updateWlCount(){
+    const el = $("#wlCount"); if (!el) return;
+    const n = Object.keys(wl.items).length;
+    el.hidden = !n; el.textContent = n;
+  }
+
+  // what's on offer in India for one title, boiled down to names
+  async function availability(it){
+    const d = await cached(`wp:${it.kind}:${it.id}`, () => tmdb(`/${it.kind}/${it.id}/watch/providers`));
+    const IN = ((d.results || {})[REGION]) || {}, subs = new Set(state.subs);
+    const flat = dedupe(IN.flatrate || []).map(p => p.name), free = dedupe([...(IN.free || []), ...(IN.ads || [])]).map(p => p.name);
+    return { mine: flat.filter(n => subs.has(n)), free, other: flat.filter(n => !subs.has(n)), rent: !!(IN.rent || IN.buy) };
+  }
+
+  let wlFilter = "all", wlRating = null;
+  async function openWatch(){
+    show("watch");
+    wlRating = null;
+    const before = JSON.stringify(wl.items);
+    Object.values(wl.items).forEach(it => { delete it.fresh; delete it.gained; });
+    renderWatch(true);
+    // recheck every film, a few at a time, and flag anything that newly became watchable
+    const items = Object.entries(wl.items);
+    for (let i = 0; i < items.length; i += 4){
+      await Promise.all(items.slice(i, i + 4).map(async ([k, it]) => {
+        try{
+          const a = await availability(it), before = it.avail;
+          const gained = before ? [...a.mine, ...a.free].filter(n => !before.mine.includes(n) && !before.free.includes(n)) : [];
+          if (gained.length){ it.fresh = true; it.gained = gained; }
+          if (!same(a, before)){ it.avail = a; it.checked = Date.now(); }
+        }catch(e){ it.checkFailed = true; }
+      }));
+      if ($("#view-watch").hidden) break;
+      renderWatch(i + 4 < items.length);
+    }
+    Object.values(wl.items).forEach(it => delete it.checkFailed);
+    if (JSON.stringify(wl.items) !== before) saveWl(); // only save, and sync, when something changed
+    if (!$("#view-watch").hidden) renderWatch(false);
+  }
+
+  function renderWatch(checking){
+    const all = Object.entries(wl.items).sort(([,a],[,b]) => (readyNow(b) ? 1 : 0) - (readyNow(a) ? 1 : 0) || (b.fresh ? 1 : 0) - (a.fresh ? 1 : 0) || b.added - a.added);
+    const list = all.filter(([,it]) => wlFilter === "all" || (wlFilter === "mine" ? it.avail && it.avail.mine.length : it.avail && it.avail.free.length));
+    const chip = (v, l) => `<button type="button" class="chip" data-wf="${v}" aria-pressed="${wlFilter === v}">${l}</button>`;
+    const line = it => {
+      const a = it.avail;
+      if (!a) return `<span class="tag">${it.checkFailed ? "Couldn't check where it's streaming" : "Checking where it's streaming…"}</span>`;
+      const fresh = it.fresh ? `<span class="new">New</span>` : "";
+      return a.mine.length ? `${fresh}<span class="tag good">On your apps: ${esc(listFmt(a.mine))}</span>`
+        : a.free.length ? `${fresh}<span class="tag good">Free with ads on ${esc(listFmt(a.free))}</span>`
+        : a.other.length ? `<span class="tag">Streaming on ${esc(listFmt(a.other))}</span>`
+        : a.rent ? `<span class="tag">Only to rent or buy in India</span>` : `<span class="tag">Not streaming in India right now</span>`;
+    };
+    $("#watchBody").innerHTML = !all.length
+      ? `<p class="lede">Nothing saved yet. Tap <b>+ Watchlist</b> on any film's ticket, on your matches in For you, or say yes to one of Gemini's picks.</p>`
+      : `<p class="lede">${all.length} saved · ${all.filter(([,it]) => readyNow(it)).length} you can watch right now${checking ? ` · <span class="spin"></span>checking` : ""}</p>
+        <div class="wfilters">${chip("all", "All")}${chip("mine", "On my apps")}${chip("free", "Free")}</div>
+        ${list.length ? `<div class="wl">${list.map(([k, it]) => `<div class="wl-item" data-k="${esc(k)}">
+            ${it.p ? `<img src="${IMG}w92${it.p}" alt="" loading="lazy">` : `<div class="ph"></div>`}
+            <div class="${readyNow(it) ? "ready" : ""}">
+              <div class="n">${esc(it.t)}</div>
+              <div class="tag">${esc([(it.d || "").slice(0,4), it.l ? langName(it.l) : "", it.kind === "tv" ? "Series" : "Film"].filter(Boolean).join(" · "))}</div>
+              <div class="where">${line(it)}</div>
+            </div>
+            <div class="acts">
+              <button type="button" class="btn alt tiny" data-w="find">Where to watch</button>
+              <button type="button" class="btn alt tiny" data-w="seen">Watched it</button>
+              <button type="button" class="x" data-w="rm" aria-label="Remove ${esc(it.t)}">×</button>
+            </div>
+            ${wlRating === k ? `<div class="rate-btns" style="flex-basis:100%;margin-top:10px">${rateButtons()}</div>` : ""}
+          </div>`).join("")}</div>` : `<p class="small">Nothing here matches that filter.</p>`}`;
+  }
+
+  $("#watchBody").addEventListener("click", e => {
+    const f = e.target.closest("[data-wf]"); if (f){ wlFilter = f.dataset.wf; return renderWatch(false); }
+    const row = e.target.closest("[data-k]"); if (!row) return;
+    const k = row.dataset.k, it = wl.items[k];
+    const b = e.target.closest("[data-w]"), r = e.target.closest("[data-rate]");
+    if (r){
+      if (it.kind === "movie"){ delete taste.secret[it.id]; taste.ratings[it.id] = { t: it.t, ot: it.ot, d: it.d, p: it.p, g: it.g, l: it.l, v: 0, s: +r.dataset.rate }; saveTaste(); }
+      wlRating = null; wlRemove(k); return renderWatch(false);
+    }
+    if (!b) return;
+    if (b.dataset.w === "rm"){ wlRemove(k); return renderWatch(false); }
+    if (b.dataset.w === "seen"){
+      if (it.kind !== "movie"){ wlRemove(k); return renderWatch(false); } // TV shows aren't part of the film taste profile
+      wlRating = wlRating === k ? null : k; return renderWatch(false);
+    }
+    if (b.dataset.w === "find"){
+      show("search"); candidates = []; $("#optionsWrap").hidden = true; $("#searchMsg").innerHTML = "";
+      lookup({ ...unbrief(it.id, it), kind: it.kind, title: it.t });
+    }
+  });
+
+  // ---------- match details ----------
+  async function toggleDetail(row, c){
+    const open = row.querySelector(".mdetail");
+    row.querySelectorAll('[data-m="more"]').forEach(b => b.setAttribute("aria-expanded", !open));
+    if (open){ open.remove(); return; }
+    row.insertAdjacentHTML("beforeend", `<div class="mdetail">${spinner("Loading details")}</div>`);
+    const box = row.querySelector(".mdetail"), m = c.m;
+    let d;
+    try{ d = await cached("det" + m.id, () => tmdb(`/movie/${m.id}`, { append_to_response: "credits,videos,release_dates", language: "en-US" })); }
+    catch(err){ box.innerHTML = errBox(explain(err)); return; }
+    const inRel = ((d.release_dates && d.release_dates.results) || []).find(x => x.iso_3166_1 === "IN");
+    const cert = inRel && (inRel.release_dates.find(x => x.certification) || {}).certification;
+    const director = ((d.credits && d.credits.crew) || []).filter(x => x.job === "Director").map(x => x.name).slice(0, 2);
+    const cast = ((d.credits && d.credits.cast) || []).slice(0, 5).map(x => x.name);
+    const vids = (d.videos && d.videos.results) || [];
+    const trailer = vids.find(v => v.site === "YouTube" && v.type === "Trailer" && v.official) || vids.find(v => v.site === "YouTube" && v.type === "Trailer") || vids.find(v => v.site === "YouTube" && v.type === "Teaser");
+    const facts = [d.runtime ? `${Math.floor(d.runtime / 60)}h ${d.runtime % 60}m` : "", cert ? `<span class="cert">${esc(cert)}</span>` : "",
+      d.vote_count ? `TMDB ${d.vote_average.toFixed(1)} (${d.vote_count.toLocaleString("en-IN")} votes)` : "", (d.genres || []).map(g => esc(g.name)).join(", ")].filter(Boolean);
+    box.innerHTML = `<div class="facts">${facts.join(" · ")}</div>
+      ${d.overview ? `<p>${esc(d.overview)}</p>` : ""}
+      <div class="people">${director.length ? `<b>Directed by</b> ${esc(listFmt(director))}<br>` : ""}${cast.length ? `<b>With</b> ${esc(listFmt(cast))}` : ""}</div>
+      <h4>Why it matched</h4><ul>${whyMatched(c, d).map(x => `<li>${x}</li>`).join("")}</ul>
+      <h4>Where to watch</h4><div>${await whereLine(m.id) || `<span class="tag">Couldn't check right now</span>`}</div>
+      <div class="row" style="margin-top:12px">
+        ${trailer ? `<a class="btn alt tiny" href="https://www.youtube.com/watch?v=${encodeURIComponent(trailer.key)}" target="_blank" rel="noopener">Watch the trailer</a>` : ""}
+        <button type="button" class="btn alt tiny" data-m="find">Full streaming details</button>
+      </div>`;
+  }
+
+  // plain-language reasons, built from the same profile that scored the film
+  function whyMatched(c, d){
+    const P = profile(), m = c.m, rs = Object.values(taste.ratings), out = [];
+    const liked = f => rs.filter(r => r.s > 0 && f(r)).length;
+    if (c.because) out.push(esc(c.because) + ".");
+    const lang = m.original_language;
+    if (lang && P.l(lang) > .2) out.push(`You've liked ${liked(r => r.l === lang)} ${esc(langName(lang))} film${liked(r => r.l === lang) === 1 ? "" : "s"}.`);
+    (m.genre_ids || []).filter(g => P.g(g) > .2).slice(0, 3).forEach(g => out.push(`${esc(genreMap[g] || "")}: you've liked ${liked(r => r.g.includes(g))} of these.`));
+    const dec = decade(m.release_date);
+    if (dec && P.d(dec) > .2) out.push(`Films from the ${dec} have gone down well with you.`);
+    (m.genre_ids || []).filter(g => P.g(g) < -.2).forEach(g => out.push(`Heads up: ${esc(genreMap[g] || "")} hasn't usually worked for you.`));
+    if (c.secret) out.push("You said in the survey that you haven't seen it yet.");
+    if (d.vote_average >= 7.5 && d.vote_count > 200) out.push(`Highly rated by TMDB viewers (${d.vote_average.toFixed(1)}).`);
+    return out.length ? out : ["It's well rated in the genres you picked."];
+  }
 
   // landing page for For you: the survey button lives here
   function openSuggest(){
@@ -1715,11 +1933,11 @@ For each film give: title (the English title as listed on TMDB), original_title,
       <button type="button" class="btn" data-go="g-survey">${done ? `Continue Gemini's picks · ${done} of ${g.picks.length}` : "See Gemini's picks"}</button></div>`;
     const wants = g.picks.filter(p => ans[p.id].want), seen = g.picks.filter(p => ans[p.id].seen), nos = g.picks.filter(p => !ans[p.id].seen && !ans[p.id].want);
     const liked = seen.filter(p => ans[p.id].s > 0).length;
-    const row = p => `<div class="wl-item match">
+    const row = p => `<div class="wl-item gpick">
         ${p.p ? `<img src="${IMG}w92${p.p}" alt="" loading="lazy">` : `<div class="ph"></div>`}
         <div><div class="n">${esc(p.t)}</div><div class="tag">#${p.rank} · ${esc([(p.d || "").slice(0,4), p.l ? langName(p.l) : ""].filter(Boolean).join(" · "))}</div>
           <div class="why">${esc(p.why)}</div><div class="where" data-gwhere="${p.id}"></div></div>
-        <div class="acts"><button type="button" class="btn alt tiny" data-go="g-find" data-id="${p.id}">Where to watch</button></div>
+        <div class="acts"><button type="button" class="btn alt tiny" data-go="g-find" data-id="${p.id}">Where to watch</button>${wlButton({ ...unbrief(p.id, p), kind: "movie" })}</div>
       </div>`;
     setTimeout(() => wants.forEach(p => whereLine(p.id).then(h => { const el = document.querySelector(`[data-gwhere="${p.id}"]`); if (el) el.innerHTML = h; })));
     return `<div class="gem" id="gem">${head}${err}
@@ -1738,10 +1956,15 @@ For each film give: title (the English title as listed on TMDB), original_title,
   }
   $("#tabs").addEventListener("click", e => {
     const b = e.target.closest("[data-go]"); if (!b) return;
-    if (b.dataset.go === "suggest") openSuggest(); else { show("search"); $("#inQuery").focus(); }
+    if (b.dataset.go === "suggest") openSuggest(); else if (b.dataset.go === "watch") openWatch(); else { show("search"); $("#inQuery").focus(); }
   });
 
   // ---------- start ----------
+  if (!store.get("wlInit", false) && taste.gemini){
+    taste.gemini.picks.filter(p => (taste.gemini.answers[p.id] || {}).want).forEach(p => wlAdd({ ...unbrief(p.id, p), kind: "movie" }));
+    store.set("wlInit", true);
+  }
+  updateWlCount();
   $("#btnSync").addEventListener("click", openSync);
   $("#btnSyncFromSetup").addEventListener("click", openSync);
   (async () => {
