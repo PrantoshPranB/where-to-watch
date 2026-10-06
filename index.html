@@ -531,7 +531,8 @@ footer{margin-top:56px;padding-top:16px;border-top:2px solid var(--ink);font:500
         <div id="syncMsg"></div>
         <div class="row"><button class="btn" type="submit" id="btnSyncLogin">Log in</button>${back}</div>
       </form>
-      <details style="margin-top:36px">
+      <p class="small" style="margin-top:22px">No passphrase? <button type="button" class="linkbtn" data-s="setup">Get a pass with your own API keys</button></p>
+      ${location.hash === "#owner" ? `<details open style="margin-top:36px">
         <summary>Owner: create the passphrase file</summary>
         <p class="small" style="margin-top:12px">Do this once, or again whenever a key or the passphrase changes. It makes <b>vault.json</b>, an encrypted file holding both API keys and the GitHub token used for syncing. Only the passphrase can open it, so it's safe to publish next to index.html.</p>
         <ol class="steps">
@@ -549,11 +550,13 @@ footer{margin-top:56px;padding-top:16px;border-top:2px solid var(--ink);font:500
           <div id="vaultMsg"></div>
           <button class="btn" type="submit" id="btnVault">Create vault.json</button>
         </form>
-      </details>`;
+      </details>` : ""}`;
   }
 
   function openSync(){ show("sync"); renderSync(); }
-  function routeHome(){ if (!state.key) show("setup"); else if (!state.subs.length) openApps(); else show("search"); }
+  function routeHome(){ if (!state.key) openSync(); else if (!state.subs.length) openApps(); else show("search"); }
+  // the owner tools only appear at the page's #owner address
+  window.addEventListener("hashchange", () => { if (!$("#view-sync").hidden) renderSync(); });
 
   // ---------- passphrase vault ----------
   // vault.json sits next to index.html and is public, so it's encrypted: AES-GCM with a key
@@ -635,6 +638,7 @@ footer{margin-top:56px;padding-top:16px;border-top:2px solid var(--ink);font:500
   document.addEventListener("click", async e => {
     const b = e.target.closest("[data-s]"); if (!b || $("#view-sync").hidden) return;
     if (b.dataset.s === "back") return routeHome();
+    if (b.dataset.s === "setup") return show("setup");
     if (b.dataset.s === "now"){ if (await syncNow()) refreshFromStore(); return; }
     if (b.dataset.s === "logout"){
       if (!confirm("Log out on this device? Your profile stays safe in the repo.")) return;
