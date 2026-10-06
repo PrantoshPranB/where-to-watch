@@ -68,6 +68,7 @@ label.field span{display:block;font:600 12px/1 var(--mono);letter-spacing:.14em;
 input[type=text],input[type=password],input[type=search]{
   width:100%;padding:14px 15px;border:2px solid var(--line);border-radius:4px;background:var(--paper);transition:box-shadow .15s, transform .15s;
 }
+input[type=text],input[type=password],input[type=search]{box-sizing:border-box;max-width:100%}
 input:focus{outline:none;box-shadow:var(--shadow);transform:translate(-2px,-2px)}
 input::placeholder{color:var(--muted);opacity:.8}
 
@@ -220,6 +221,13 @@ kbd{font:inherit;border:1.5px solid var(--hair);border-radius:3px;padding:2px 5p
 .gem .ai{font:600 10px/1 var(--mono);letter-spacing:.16em;text-transform:uppercase;color:#17110C;background:var(--gold);padding:5px 7px 4px;border-radius:2px}
 .gem .score{font:600 12px/1.4 var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:4px 0 14px}
 
+.syncbtn .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:7px;vertical-align:1px;background:var(--muted)}
+.syncbtn .dot.ok{background:var(--good)}.syncbtn .dot.busy{background:var(--gold)}.syncbtn .dot.err{background:var(--red)}
+.steps{margin:6px 0 22px;padding-left:20px;font-size:15px}
+.steps li{margin-bottom:6px}
+.sync-card{padding:20px 22px;border:2px solid var(--line);border-radius:6px;background:var(--paper);margin-bottom:18px}
+.sync-card .who{font:400 28px/1.1 var(--display);margin:6px 0}
+
 /* watchlist */
 .wl{border-top:2px solid var(--ink)}
 .wl-item{display:flex;align-items:center;gap:14px;padding:12px 0;border-bottom:1px dashed var(--hair)}
@@ -258,6 +266,7 @@ footer{margin-top:56px;padding-top:16px;border-top:2px solid var(--ink);font:500
     <div class="brand"><span class="brand-name">Where to watch</span> <span class="flag">India</span></div>
     <div class="hello" id="hello" hidden>
       <span id="helloName"></span>
+      <button class="btn alt tiny syncbtn" id="btnSync" type="button"><span class="dot" id="syncDot"></span><span id="syncLabel">Sync</span></button>
       <button class="btn alt tiny" id="btnSettings">Settings</button>
     </div>
   </header>
@@ -270,7 +279,8 @@ footer{margin-top:56px;padding-top:16px;border-top:2px solid var(--ink);font:500
   <section id="view-setup" hidden>
     <p class="kicker">Step 1 of 2 · Box office</p>
     <h1>Let's get you a pass.</h1>
-    <p class="lede">Takes a minute, and it's saved only in this browser. Searches go to TMDB, plus Internet Archive and Wikimedia Commons to look for free legal copies.</p>
+    <p class="lede">Takes a minute, and it's saved in this browser. Searches go to TMDB, plus Internet Archive and Wikimedia Commons to look for free legal copies.</p>
+    <div class="msg" id="syncHint">Have the passphrase? <button type="button" class="linkbtn" id="btnSyncFromSetup">Log in</button> with your name instead. The keys fill in for you, and your settings follow you between devices.</div>
     <form id="setupForm">
       <label class="field"><span>Your name</span>
         <input type="text" id="inName" autocomplete="given-name" placeholder="Optional">
@@ -324,6 +334,13 @@ footer{margin-top:56px;padding-top:16px;border-top:2px solid var(--ink);font:500
     <div id="result"></div>
   </section>
 
+  <!-- Sync across devices -->
+  <section id="view-sync" hidden>
+    <p class="kicker">Log in · sync your devices</p>
+    <h1 id="syncHeading">Log in to sync.</h1>
+    <div id="syncBody"></div>
+  </section>
+
   <!-- Taste test, step 1: genres -->
   <section id="view-quiz" hidden>
     <p class="kicker">Taste test · step 1</p>
@@ -370,9 +387,270 @@ footer{margin-top:56px;padding-top:16px;border-top:2px solid var(--ink);font:500
   // ---------- storage (local to this browser) ----------
   const store = {
     get(k, d){ try{ const v = localStorage.getItem("w2w:"+k); return v ? JSON.parse(v) : d; }catch(e){ return d; } },
-    set(k, v){ try{ localStorage.setItem("w2w:"+k, JSON.stringify(v)); }catch(e){} }
+    set(k, v){ try{ localStorage.setItem("w2w:"+k, JSON.stringify(v)); }catch(e){} touched(k); }
   };
   const state = { name: store.get("name",""), key: store.get("key",""), gkey: store.get("gkey",""), subs: store.get("subs",[]) };
+
+  // ---------- sync across devices ----------
+  // Each profile is one JSON file in a private GitHub repo, written with the GitHub contents API.
+  // The token stays on each device; everything else in SYNC_KEYS travels. Every key carries the time
+  // it last changed, so the newer value wins, and ratings from two devices are combined, not replaced.
+  const SYNC_KEYS = ["name", "key", "gkey", "subs", "taste"];
+  const DEFAULT_REPO = "PrantoshPranB/where-to-watch-data";
+  var syncCfg = store.get("sync", null), pushTimer = null, syncBusy = null, lastSync = 0, syncError = "";
+
+  function touched(k){
+    if (!SYNC_KEYS.includes(k)) return;
+    const meta = store.get("meta", {}); meta[k] = Date.now(); store.set("meta", meta);
+    if (syncCfg){ clearTimeout(pushTimer); pushTimer = setTimeout(syncNow, 4000); setSyncStatus(); }
+  }
+
+  const slug = n => n.trim().toLowerCase().normalize("NFKD").replace(/[\u0300-\u036f]/g, "").replace(/[^\p{L}\p{N}]+/gu, "-").replace(/^-|-$/g, "") || "me";
+  const filePath = cfg => `/repos/${cfg.repo}/contents/profiles/${encodeURIComponent(slug(cfg.name))}.json`;
+  const b64enc = str => { const b = new TextEncoder().encode(str); let out = ""; for (let i = 0; i < b.length; i += 8192) out += String.fromCharCode(...b.subarray(i, i + 8192)); return btoa(out); };
+  const b64dec = str => new TextDecoder().decode(Uint8Array.from(atob(str.replace(/\s/g, "")), c => c.charCodeAt(0)));
+  const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+  const device = () => (navigator.userAgent.match(/iPhone|iPad|Android|Macintosh|Windows|Linux/) || ["a device"])[0].replace("Macintosh", "Mac");
+  const gh = (cfg, path, opts = {}) => fetch("https://api.github.com" + path, { cache: "no-store", ...opts,
+    headers: { Accept: "application/vnd.github+json", Authorization: "Bearer " + cfg.token, ...(opts.body ? { "content-type": "application/json" } : {}) } });
+
+  function snapshot(){
+    const data = {};
+    SYNC_KEYS.forEach(k => { const v = store.get(k, undefined); if (v !== undefined) data[k] = v; });
+    return { data, meta: store.get("meta", {}) };
+  }
+
+  function mergeTaste(L, R, tl, tr){
+    const [n, o, tOld] = tl >= tr ? [L, R, tr] : [R, L, tl];
+    if ((n.resetAt || 0) > tOld) return n; // the older copy predates a "start over"
+    const ratings = { ...(o.ratings || {}), ...(n.ratings || {}) };
+    const secret = { ...(o.secret || {}), ...(n.secret || {}) };
+    Object.keys(ratings).forEach(id => delete secret[id]);
+    const ga = (n.gemini && n.gemini.at) || 0, gb = (o.gemini && o.gemini.at) || 0;
+    let gemini = ga >= gb ? n.gemini : o.gemini;
+    if (n.gemini && o.gemini && ga === gb) gemini = { ...n.gemini, answers: { ...o.gemini.answers, ...n.gemini.answers } };
+    const hist = [...(o.gHist || []), ...(n.gHist || [])];
+    return { ...n, ratings, secret, gemini, skip: [...new Set([...(o.skip || []), ...(n.skip || [])])],
+      gHist: [...new Map(hist.map(h => [h.id, h])).values()], resetAt: Math.max(n.resetAt || 0, o.resetAt || 0) };
+  }
+
+  function merge(local, remote){
+    const lm = local.meta || {}, rm = remote.meta || {}, data = {}, meta = {};
+    SYNC_KEYS.forEach(k => {
+      const tl = lm[k] || 0, tr = rm[k] || 0, lv = local.data[k], rv = remote.data[k];
+      const v = k === "taste" && lv && rv ? mergeTaste(lv, rv, tl, tr) : tr > tl ? rv : lv !== undefined ? lv : rv;
+      if (v !== undefined) data[k] = v;
+      if (tl || tr) meta[k] = Math.max(tl, tr);
+    });
+    return { data, meta };
+  }
+
+  function applyLocal(m){
+    Object.entries(m.data).forEach(([k, v]) => { try{ localStorage.setItem("w2w:" + k, JSON.stringify(v)); }catch(e){} });
+    try{ localStorage.setItem("w2w:meta", JSON.stringify(m.meta)); }catch(e){}
+  }
+
+  async function pull(cfg){
+    const r = await gh(cfg, filePath(cfg));
+    if (r.status === 404) return { sha: null, remote: null };
+    if (r.status === 401) throw new Error("GitHub rejected the token. Make a new one and log in again.");
+    if (!r.ok) throw new Error("GitHub returned an error (" + r.status + ").");
+    const d = await r.json();
+    return { sha: d.sha, remote: JSON.parse(b64dec(d.content)) };
+  }
+
+  // pull, merge, write back if anything differs; retried if another device saved in between
+  function syncNow(){
+    if (!syncCfg) return Promise.resolve(false);
+    if (syncBusy) return syncBusy;
+    clearTimeout(pushTimer); pushTimer = null;
+    syncBusy = (async () => {
+      setSyncStatus("busy");
+      let changed = false;
+      try{
+        for (let attempt = 0; attempt < 3; attempt++){
+          const { sha, remote } = await pull(syncCfg);
+          const local = snapshot();
+          const merged = remote ? merge(local, remote) : local;
+          if (!same(merged.data, local.data)) changed = true;
+          applyLocal(merged);
+          if (remote && same(merged.data, remote.data)){ lastSync = Date.now(); syncError = ""; break; }
+          const r = await gh(syncCfg, filePath(syncCfg), { method: "PUT", body: JSON.stringify({
+            message: `Sync ${syncCfg.name} from ${device()}`, content: b64enc(JSON.stringify({ v: 1, updated: Date.now(), ...merged }, null, 1)), ...(sha ? { sha } : {}) }) });
+          if (r.ok){ lastSync = Date.now(); syncError = ""; break; }
+          if (r.status === 409 || r.status === 422) continue;
+          if (r.status === 401) throw new Error("GitHub rejected the token. Make a new one and log in again.");
+          if (r.status === 403 || r.status === 404) throw new Error("The token can read but not save. Give it Contents: Read and write on the repo.");
+          throw new Error("GitHub returned an error (" + r.status + ").");
+        }
+      }catch(e){ syncError = /fetch/i.test(e.message) ? "Couldn't reach GitHub. Changes are kept on this device and sync later." : e.message; }
+      return changed;
+    })().finally(() => { syncBusy = null; setSyncStatus(); if (!$("#view-sync").hidden) renderSync(); });
+    return syncBusy;
+  }
+
+  // reload what's in memory after a sync brought changes from another device
+  function refreshFromStore(){
+    state.name = store.get("name", ""); state.key = store.get("key", ""); state.gkey = store.get("gkey", ""); state.subs = store.get("subs", []);
+    taste = store.get("taste", taste);
+  }
+
+  const ago = t => { const s = Math.round((Date.now() - t) / 1000); return s < 60 ? "just now" : s < 3600 ? Math.round(s / 60) + " min ago" : Math.round(s / 3600) + " h ago"; };
+  function setSyncStatus(st){
+    const dot = $("#syncDot"); if (!dot) return;
+    const status = st || (!syncCfg ? "" : syncError ? "err" : pushTimer ? "busy" : lastSync ? "ok" : "busy");
+    dot.className = "dot " + status;
+    $("#syncLabel").textContent = syncCfg ? syncCfg.name : "Log in";
+    $("#btnSync").title = !syncCfg ? "Sync across devices" : syncError ? "Sync problem: " + syncError : status === "busy" ? "Syncing" : "Synced " + ago(lastSync);
+  }
+
+  function renderSync(){
+    $("#syncHint").hidden = !!syncCfg;
+    const back = state.key && state.subs.length ? `<button type="button" class="btn alt" data-s="back">Back to the app</button>` : "";
+    if (syncCfg){
+      $("#syncHeading").textContent = "You're synced.";
+      $("#syncBody").innerHTML = `<div class="sync-card">
+          <div class="small">Logged in as</div><div class="who">${esc(syncCfg.name)}</div>
+          <div class="small">Saved to <b>${esc(syncCfg.repo)}</b> as profiles/${esc(slug(syncCfg.name))}.json · ${syncBusy ? "syncing now" : lastSync ? "last synced " + ago(lastSync) : "not synced yet"}</div>
+        </div>
+        ${syncError ? errBox(esc(syncError)) : ""}
+        <p class="lede">Your settings, apps, ratings and Gemini picks sync automatically. On another device, open the app, tap <b>Log in</b>, and use the same name and the passphrase.</p>
+        <div class="row">
+          <button type="button" class="btn" data-s="now">Sync now</button>
+          ${back}
+          <button type="button" class="linkbtn" data-s="logout">Log out on this device</button>
+        </div>`;
+      return;
+    }
+    $("#syncHeading").textContent = "Log in.";
+    $("#syncBody").innerHTML = `
+      <p class="lede">Type your name and the passphrase. The passphrase unlocks the app's API keys. Your name picks your profile: settings, apps and ratings. Use the same name on any device and it all comes with you. A new name starts a new profile.</p>
+      <form id="syncForm">
+        <label class="field"><span>Your name</span><input type="text" id="inSyncName" autocomplete="username" required value="${esc(state.name)}" placeholder="The same on every device"></label>
+        <label class="field"><span>Passphrase</span><input type="password" id="inPass" autocomplete="current-password" required></label>
+        <div id="syncMsg"></div>
+        <div class="row"><button class="btn" type="submit" id="btnSyncLogin">Log in</button>${back}</div>
+      </form>
+      <details style="margin-top:36px">
+        <summary>Owner: create the passphrase file</summary>
+        <p class="small" style="margin-top:12px">Do this once, or again whenever a key or the passphrase changes. It makes <b>vault.json</b>, an encrypted file holding both API keys and the GitHub token used for syncing. Only the passphrase can open it, so it's safe to publish next to index.html.</p>
+        <ol class="steps">
+          <li>Create a <b>private</b> repo at <a href="https://github.com/new" target="_blank" rel="noopener">github.com/new</a>, for example <b>where-to-watch-data</b>.</li>
+          <li>Make a token at <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">GitHub's fine-grained token page</a>. Repository access: <b>Only select repositories</b>, pick that repo. Permissions: <b>Contents</b>, <b>Read and write</b>.</li>
+          <li>Fill this in, download vault.json, and add it to the app's repo next to index.html.</li>
+        </ol>
+        <form id="vaultForm">
+          <label class="field"><span>Passphrase</span><input type="password" id="vPass" autocomplete="new-password" required minlength="10"></label>
+          <label class="field"><span>Passphrase again</span><input type="password" id="vPass2" autocomplete="new-password" required></label>
+          <label class="field"><span>TMDB API key or read access token</span><input type="password" id="vTmdb" autocomplete="off" required value="${esc(state.key)}"></label>
+          <label class="field"><span>Gemini API key (optional)</span><input type="password" id="vGem" autocomplete="off" value="${esc(state.gkey)}"></label>
+          <label class="field"><span>Private GitHub repo</span><input type="text" id="vRepo" required value="${esc(DEFAULT_REPO)}" placeholder="owner/repo"></label>
+          <label class="field"><span>GitHub token</span><input type="password" id="vToken" autocomplete="off" required placeholder="github_pat_…"></label>
+          <div id="vaultMsg"></div>
+          <button class="btn" type="submit" id="btnVault">Create vault.json</button>
+        </form>
+      </details>`;
+  }
+
+  function openSync(){ show("sync"); renderSync(); }
+  function routeHome(){ if (!state.key) show("setup"); else if (!state.subs.length) openApps(); else show("search"); }
+
+  // ---------- passphrase vault ----------
+  // vault.json sits next to index.html and is public, so it's encrypted: AES-GCM with a key
+  // stretched from the passphrase by 600,000 rounds of PBKDF2, which makes guessing slow.
+  const VAULT_ROUNDS = 600000;
+  const bytesToB64 = b => { let out = ""; for (let i = 0; i < b.length; i += 8192) out += String.fromCharCode(...b.subarray(i, i + 8192)); return btoa(out); };
+  const b64ToBytes = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
+  async function vaultKey(pass, salt, rounds){
+    const base = await crypto.subtle.importKey("raw", new TextEncoder().encode(pass), "PBKDF2", false, ["deriveKey"]);
+    return crypto.subtle.deriveKey({ name: "PBKDF2", salt, iterations: rounds, hash: "SHA-256" }, base, { name: "AES-GCM", length: 256 }, false, ["encrypt", "decrypt"]);
+  }
+  async function sealVault(pass, secrets){
+    const salt = crypto.getRandomValues(new Uint8Array(16)), iv = crypto.getRandomValues(new Uint8Array(12));
+    const ct = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, await vaultKey(pass, salt, VAULT_ROUNDS), new TextEncoder().encode(JSON.stringify(secrets)));
+    return { v: 1, kdf: "PBKDF2-SHA256", rounds: VAULT_ROUNDS, salt: bytesToB64(salt), iv: bytesToB64(iv), data: bytesToB64(new Uint8Array(ct)) };
+  }
+  async function openVault(pass, vault){
+    const key = await vaultKey(pass, b64ToBytes(vault.salt), vault.rounds);
+    const pt = await crypto.subtle.decrypt({ name: "AES-GCM", iv: b64ToBytes(vault.iv) }, key, b64ToBytes(vault.data)); // throws on a wrong passphrase
+    return JSON.parse(new TextDecoder().decode(pt));
+  }
+  async function checkRepo(cfg){
+    let r;
+    try{ r = await gh(cfg, "/repos/" + cfg.repo); }catch(err){ return "Couldn't reach GitHub. Check your connection."; }
+    if (r.status === 401) return "GitHub rejected the token.";
+    if (!r.ok) return "Can't find that repo, or the token doesn't have access to it.";
+    if (!(await r.json()).private) return "That repo is public, so anyone could read your profiles. Make it private, or use a private repo.";
+    return "";
+  }
+
+  document.addEventListener("submit", async e => {
+    if (e.target.id === "vaultForm"){
+      e.preventDefault();
+      const msg = t => $("#vaultMsg").innerHTML = t;
+      const pass = $("#vPass").value;
+      if (pass !== $("#vPass2").value) return msg(errBox("The two passphrases don't match."));
+      const secrets = { tmdb: $("#vTmdb").value.trim(), gemini: $("#vGem").value.trim(),
+        repo: $("#vRepo").value.trim().replace(/^https:\/\/github\.com\//, "").replace(/\.git$|\/$/g, ""), token: $("#vToken").value.trim() };
+      $("#btnVault").disabled = true;
+      msg(spinner("Checking the TMDB key and the repo"));
+      try{
+        try{ await tmdb("/authentication", {}, secrets.tmdb); }catch(err){ return msg(errBox(explain(err))); }
+        const bad = await checkRepo({ repo: secrets.repo, token: secrets.token });
+        if (bad) return msg(errBox(bad));
+        msg(spinner("Encrypting"));
+        const vault = await sealVault(pass, secrets);
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(new Blob([JSON.stringify(vault, null, 1)], { type: "application/json" }));
+        a.download = "vault.json"; a.click();
+        msg(`<div class="msg">vault.json downloaded. Put it in the where-to-watch repo next to index.html and push. Once it's live, anyone with the passphrase can log in.</div>`);
+      } finally { $("#btnVault").disabled = false; }
+      return;
+    }
+    if (e.target.id !== "syncForm") return;
+    e.preventDefault();
+    const name = $("#inSyncName").value.trim(), pass = $("#inPass").value;
+    const fail = t => { $("#syncMsg").innerHTML = errBox(t); $("#btnSyncLogin").disabled = false; };
+    $("#btnSyncLogin").disabled = true;
+    $("#syncMsg").innerHTML = spinner("Unlocking");
+    let vault, secrets;
+    try{ const r = await fetch("vault.json", { cache: "no-store" }); if (!r.ok) throw 0; vault = await r.json(); }
+    catch(err){ return fail("The app has no passphrase file yet. The owner needs to create vault.json (see below) and publish it."); }
+    try{ secrets = await openVault(pass, vault); }
+    catch(err){ return fail("That passphrase isn't right."); }
+    syncCfg = { name, repo: secrets.repo, token: secrets.token }; syncError = "";
+    $("#syncMsg").innerHTML = spinner("Loading your profile");
+    await syncNow();
+    if (syncError){ const m = syncError; syncCfg = null; setSyncStatus(); return fail(esc(m)); }
+    store.set("sync", syncCfg);
+    refreshFromStore();
+    // the passphrase hands out the shared keys; a profile that already has its own keys keeps them
+    if (!state.key){ state.key = secrets.tmdb; store.set("key", secrets.tmdb); }
+    if (!state.gkey && secrets.gemini){ state.gkey = secrets.gemini; store.set("gkey", secrets.gemini); }
+    if (!state.name){ state.name = name; store.set("name", name); }
+    setSyncStatus();
+    routeHome();
+  });
+
+  document.addEventListener("click", async e => {
+    const b = e.target.closest("[data-s]"); if (!b || $("#view-sync").hidden) return;
+    if (b.dataset.s === "back") return routeHome();
+    if (b.dataset.s === "now"){ if (await syncNow()) refreshFromStore(); return; }
+    if (b.dataset.s === "logout"){
+      if (!confirm("Log out on this device? Your profile stays safe in the repo.")) return;
+      const wipe = confirm("Also remove your API keys, apps and ratings from this device? Choose Cancel to keep a local copy.");
+      localStorage.removeItem("w2w:sync"); syncCfg = null;
+      if (wipe){ Object.keys(localStorage).filter(k => k.startsWith("w2w:")).forEach(k => localStorage.removeItem(k)); return location.reload(); }
+      setSyncStatus(); renderSync();
+    }
+  });
+
+  // catch up when you come back to the tab, and save straight away when you leave it
+  document.addEventListener("visibilitychange", () => {
+    if (!syncCfg) return;
+    if (document.visibilityState === "hidden"){ if (pushTimer) syncNow(); }
+    else if (Date.now() - lastSync > 30000) syncNow().then(ch => { if (ch) refreshFromStore(); });
+  });
 
   // ---------- helpers ----------
   const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -411,7 +689,7 @@ footer{margin-top:56px;padding-top:16px;border-top:2px solid var(--ink);font:500
   }
   function show(v){
     setTicker();
-    ["setup","apps","search","quiz","suggest"].forEach(x => $("#view-"+x).hidden = x !== v);
+    ["setup","apps","search","quiz","suggest","sync"].forEach(x => $("#view-"+x).hidden = x !== v);
     const ready = state.key && state.subs.length;
     const main = ["search","quiz","suggest"].includes(v);
     $("#hello").hidden = $("#tabs").hidden = !ready || !main;
@@ -742,8 +1020,25 @@ Give at most 10 links, best first, and link to the page where the video actually
       <a class="btn alt tiny go" href="${esc(r.href)}" target="_blank" rel="noopener">Watch</a>
     </div>`;
 
+  const WEEK = 7 * 864e5, DAY = 864e5;
+  function savedLinks(key){
+    const all = store.get("links", {}), hit = all[key];
+    return hit && Date.now() - hit.at < (hit.rows.length ? WEEK : DAY) ? hit.rows : null;
+  }
+  function saveLinks(key, rows){
+    const all = store.get("links", {});
+    all[key] = { at: Date.now(), rows };
+    const keys = Object.keys(all).sort((a,b) => all[b].at - all[a].at);
+    keys.slice(150).forEach(k => delete all[k]); // keep the newest 150 films
+    store.set("links", all);
+  }
+  let lastFree = null;
+
   async function findFreeOnline(m, seq, canUpgrade){
-    const web = state.gkey ? cached(`links:${m.kind}:${m.id}`, () => searchWebLinks(m)) : null;
+    lastFree = { m, canUpgrade };
+    const key = `${m.kind}:${m.id}`, saved = state.gkey ? savedLinks(key) : null;
+    const web = !state.gkey ? null : saved ? Promise.resolve(saved)
+      : cached("links:" + key, () => searchWebLinks(m).then(rows => { saveLinks(key, rows); return rows; }));
     const [ia, wc] = await Promise.all([searchArchive(m).catch(() => null), searchCommons(m).catch(() => null)]);
     const box = () => seq === lookupSeq && $("#freeNet");
     const archived = [...(ia || []), ...(wc || [])];
@@ -753,7 +1048,7 @@ Give at most 10 links, best first, and link to the page where the video actually
       let html = `<h3>Free and legal online</h3>`;
       html += rows.map(freeRow).join("");
       if (webState === "busy") html += `<div class="msg"><span class="spin"></span>Gemini is searching the web for legal full-length uploads</div>`;
-      else if (webState) html += `<p class="small">${webState}</p>`;
+      else if (webState) html += `<div class="msg err">${webState} <button type="button" class="btn alt tiny" id="btnRetryWeb">Try again</button></div>`;
       if (!rows.length && webState !== "busy") html += `<p class="small">No free, legal copy found online${state.gkey ? "" : " on Internet Archive or Wikimedia Commons"}.</p>`;
       if (!state.gkey) html += `<p class="small">Add a Gemini API key in Settings and the app will also search the whole web, YouTube included, for official uploads.</p>`;
       html += note;
@@ -765,8 +1060,13 @@ Give at most 10 links, best first, and link to the page where the video actually
     if (!web) return render([], "");
     render([], "busy");
     try{ render(await web, ""); }
-    catch(e){ render([], "Web search with Gemini didn't work: " + explainGemini(e)); }
+    catch(e){ render([], "Web search with Gemini didn't work. " + explainGemini(e)); }
   }
+  $("#result").addEventListener("click", e => {
+    if (!e.target.closest("#btnRetryWeb") || !lastFree) return;
+    cache.delete(`links:${lastFree.m.kind}:${lastFree.m.id}`);
+    findFreeOnline(lastFree.m, lookupSeq, lastFree.canUpgrade);
+  });
 
   function provRow(p, tagText, tagClass, title){
     const link = SEARCH_LINKS[p.name];
@@ -1205,7 +1505,7 @@ Give at most 10 links, best first, and link to the page where the video actually
       if (g === "peek") return showTaste(false);
       if (g === "reset"){
         if (!confirm("Clear your ratings and start the survey again?")) return;
-        taste = { genres: [], ratings: {}, secret: {}, skip: [], gemini: null, gHist: [] }; saveTaste();
+        taste = { genres: [], ratings: {}, secret: {}, skip: [], gemini: null, gHist: [], resetAt: Date.now() }; saveTaste();
         lanes = []; current = null; deck = "learn";
         return openQuiz();
       }
@@ -1253,52 +1553,77 @@ Give at most 10 links, best first, and link to the page where the video actually
   }
 
   // ---------- Gemini picks ----------
-  const GEMINI_MODELS = ["gemini-3.8-flash", "gemini-3.5-flash"];
+  const GEMINI_MODELS = ["gemini-3.8-flash", "gemini-3.5-flash", "gemini-3.5-flash-lite"];
   const RATING_NAME = Object.fromEntries(RATINGS.map(([v, l]) => [v, l]));
   let gemBusy = false, gemErr = null;
   const gemDone = () => taste.gemini.picks.every(p => p.id in taste.gemini.answers);
 
   // With search, Gemini runs Google searches and we also return the pages it actually saw.
   // Search can't be combined with forced JSON output, so the JSON is pulled out of the reply text.
+  // The free tier is often busy or rate-limited, so short waits are retried and each model's
+  // separate quota gets a turn before giving up.
+  const wait = ms => new Promise(r => setTimeout(r, ms));
+  const gErr = (code, detail) => Object.assign(new Error(code), { detail });
+
   async function gemini(system, user, schema, { search = false } = {}){
-    let lastErr = new Error("GMODEL");
+    let lastErr = gErr("GMODEL");
     for (const model of GEMINI_MODELS){
-      for (const withSchema of search ? [false] : [true, false]){
+      let withSchema = !search && !!schema;
+      for (let attempt = 0; attempt < 3; attempt++){
         const body = { systemInstruction: { parts: [{ text: system }] }, contents: [{ role: "user", parts: [{ text: user }] }] };
         if (search) body.tools = [{ google_search: {} }];
         else body.generationConfig = { responseMimeType: "application/json", ...(withSchema ? { responseSchema: schema } : {}) };
         let r;
         try{ r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
           { method: "POST", headers: { "content-type": "application/json", "x-goog-api-key": state.gkey }, body: JSON.stringify(body) }); }
-        catch(e){ throw new Error("GNETWORK"); }
+        catch(e){ throw gErr("GNETWORK"); }
         const d = await r.json().catch(() => ({}));
+
         if (r.ok){
           const cand = (d.candidates && d.candidates[0]) || {};
           const text = ((cand.content && cand.content.parts) || []).map(x => x.text || "").join("");
           const a = text.indexOf("{"), b = text.lastIndexOf("}");
-          const json = JSON.parse(a >= 0 && b > a ? text.slice(a, b + 1) : text);
+          let json = null;
+          try{ json = JSON.parse(a >= 0 && b > a ? text.slice(a, b + 1) : text); }catch(e){}
+          if (!json){
+            // empty or cut-off reply (safety stop, length limit, chatty text): ask again, then move on
+            lastErr = gErr("GFORMAT", `${model}: ${cand.finishReason || "no JSON in reply"}`);
+            if (attempt === 0) continue;
+            break;
+          }
           if (!search) return json;
           const gm = cand.groundingMetadata || {};
           return { json, sources: (gm.groundingChunks || []).map(c => c.web || {}).filter(w => w.uri || w.title) };
         }
-        const err = d.error || {}, info = (err.message || "") + JSON.stringify(err.details || "");
-        if (/API_KEY_INVALID|API key not valid/i.test(info) || r.status === 401 || r.status === 403) throw new Error("GKEY");
-        if (r.status === 429) throw new Error("GQUOTA");
-        if (r.status === 404){ lastErr = new Error("GMODEL"); break; }      // try the next model
-        if (r.status === 400 && withSchema){ lastErr = new Error("G " + (err.message || 400)); continue; } // retry without the schema
-        throw new Error("G " + (err.message || r.status));
+
+        const err = d.error || {}, msg = err.message || `HTTP ${r.status}`, info = msg + JSON.stringify(err.details || "");
+        if (/API_KEY_INVALID|API key not valid|API key expired/i.test(info) || r.status === 401) throw gErr("GKEY", msg);
+        if (r.status === 403 && /API key|has not been used|is disabled/i.test(msg)) throw gErr("GKEY", msg);
+        if (r.status === 400 && withSchema){ withSchema = false; attempt--; continue; } // try once more without the schema
+        if (r.status === 429 || r.status >= 500){
+          const retry = info.match(/"retryDelay":"(\d+(?:\.\d+)?)s"/);
+          const delay = retry ? +retry[1] * 1000 : 1500 * (attempt + 1);
+          lastErr = gErr(r.status === 429 ? "GQUOTA" : "GBUSY", `${model}: ${msg}`);
+          if (attempt < 2 && delay <= 8000){ await wait(delay); continue; }
+          break; // long wait or still failing: try the next model's quota
+        }
+        // 403 permission, 404 unknown model, 400 tool not supported: try the next model
+        lastErr = gErr(r.status === 404 ? "GMODEL" : "G", `${model}: ${msg}`);
+        break;
       }
     }
     throw lastErr;
   }
   function explainGemini(e){
-    if (e.message === "GKEY") return "Gemini rejected the API key. Check it in Settings.";
-    if (e.message === "GQUOTA") return "Gemini's rate limit or free quota is used up. Wait a minute and try again.";
+    const more = e.detail ? ` <span class="small">(${esc(e.detail)})</span>` : "";
+    if (e.message === "GKEY") return "Gemini rejected the API key. Check it in Settings." + more;
+    if (e.message === "GQUOTA") return `Gemini's free quota is used up for now, on every model the app tried. The free tier allows only a few requests a minute and a daily cap. Wait a minute, or see your limits at <a href="https://aistudio.google.com/rate-limit" target="_blank" rel="noopener">aistudio.google.com/rate-limit</a>.` + more;
+    if (e.message === "GBUSY") return "Gemini's servers are overloaded right now. Try again in a minute." + more;
     if (e.message === "GNETWORK") return "Couldn't reach Gemini. Check your connection and try again.";
-    if (e.message === "GMODEL") return "None of the Gemini models this app uses are available to your key.";
-    if (e instanceof SyntaxError) return "Gemini's reply wasn't in the expected format. Try again.";
+    if (e.message === "GMODEL") return "None of the Gemini models this app uses are available to your key." + more;
+    if (e.message === "GFORMAT") return "Gemini's reply came back empty or unreadable. Try again." + more;
     if (["KEY","NETWORK"].includes(e.message) || /^HTTP/.test(e.message)) return explain(e);
-    return "Gemini returned an error: " + esc(e.message.replace(/^G /, ""));
+    return "Gemini returned an error." + (more || ` <span class="small">(${esc(e.message.replace(/^G /, ""))})</span>`);
   }
 
   function geminiPrompt(){
@@ -1413,9 +1738,19 @@ For each film give: title (the English title as listed on TMDB), original_title,
   });
 
   // ---------- start ----------
-  if (!state.key) show("setup");
-  else if (!state.subs.length) openApps();
-  else show("search");
+  $("#btnSync").addEventListener("click", openSync);
+  $("#btnSyncFromSetup").addEventListener("click", openSync);
+  (async () => {
+    if (syncCfg){
+      document.querySelector(".wrap").insertAdjacentHTML("beforeend", `<div id="bootSync">${spinner("Syncing your profile")}</div>`);
+      await Promise.race([syncNow(), wait(6000)]); // don't hold the app hostage if GitHub is slow
+      $("#bootSync").remove();
+      refreshFromStore();
+    }
+    $("#syncHint").hidden = !!syncCfg;
+    setSyncStatus();
+    routeHome();
+  })();
 })();
 </script>
 </body>
