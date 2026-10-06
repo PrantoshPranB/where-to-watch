@@ -315,6 +315,7 @@ footer{margin-top:56px;padding-top:16px;border-top:2px solid var(--ink);font:500
         <input type="password" id="inGemini" autocomplete="off" placeholder="For AI picks in For you">
       </label>
       <p class="small">Get one at <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com/apikey</a>. When you ask for AI picks, your genres, ratings and not-watched films are sent to Google's Gemini.</p>
+      <p class="small" id="gUsage"></p>
       <div id="setupMsg"></div>
       <button class="btn" type="submit" id="btnSetup">Continue</button>
     </form>
@@ -814,6 +815,9 @@ footer{margin-top:56px;padding-top:16px;border-top:2px solid var(--ink);font:500
 
   $("#btnSettings").addEventListener("click", () => {
     $("#inName").value = state.name; $("#inKey").value = state.key; $("#inGemini").value = state.gkey;
+    const u = store.get("gusage", {}), dead = deadModels();
+    $("#gUsage").textContent = (u.day === new Date().toDateString() ? `Gemini requests from this browser today: ${u.n} (${Object.entries(u.models).map(([m, n]) => `${m.replace("gemini-", "")}: ${n}`).join(", ")}).` : "No Gemini requests from this browser today.")
+      + (Object.keys(dead).length ? ` Daily limit reached on ${Object.keys(dead).map(m => m.replace("gemini-", "")).join(", ")}, until about ${new Date(Math.min(...Object.values(dead))).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}.` : "");
     show("setup");
   });
 
@@ -1072,7 +1076,7 @@ Give at most 10 links, best first, and link to the page where the video actually
   const WEEK = 7 * 864e5, DAY = 864e5;
   function savedLinks(key){
     const all = store.get("links", {}), hit = all[key];
-    return hit && Date.now() - hit.at < (hit.rows.length ? WEEK : DAY) ? hit.rows : null;
+    return hit && Date.now() - hit.at < (hit.rows.length ? WEEK : DAY) ? hit : null;
   }
   function saveLinks(key, rows){
     const all = store.get("links", {});
@@ -1083,12 +1087,14 @@ Give at most 10 links, best first, and link to the page where the video actually
   }
   let lastFree = null;
 
-  async function findFreeOnline(m, seq, canUpgrade){
+  // Archive and Commons are free to query, so they run straight away. The Gemini web search spends
+  // quota, so it only runs when asked; its results are kept for a week, so each film costs one request.
+  async function findFreeOnline(m, seq, canUpgrade, runWeb = false){
     lastFree = { m, canUpgrade };
     const key = `${m.kind}:${m.id}`, saved = state.gkey ? savedLinks(key) : null;
-    const web = !state.gkey ? null : saved ? Promise.resolve(saved)
-      : cached("links:" + key, () => searchWebLinks(m).then(rows => { saveLinks(key, rows); return rows; }));
-    const [ia, wc] = await Promise.all([searchArchive(m).catch(() => null), searchCommons(m).catch(() => null)]);
+    const web = !state.gkey ? null : runWeb ? cached("links:" + key, () => searchWebLinks(m).then(rows => { saveLinks(key, rows); return rows; }))
+      : saved ? Promise.resolve(saved.rows) : null;
+    const [ia, wc] = await Promise.all([cached("ia:" + key, () => searchArchive(m)).catch(() => null), cached("wc:" + key, () => searchCommons(m)).catch(() => null)]);
     const box = () => seq === lookupSeq && $("#freeNet");
     const archived = [...(ia || []), ...(wc || [])];
     const note = `<p class="small" style="margin-top:8px">Archive and Commons copies are shown only with an open licence, or when labelled public domain and more than 60 years past release (India's copyright term for films).${state.gkey ? " Web links come from Gemini's Google searches and are checked by the app before they're shown, but check who uploaded a video before you rely on it." : ""}</p>`;
@@ -1097,24 +1103,29 @@ Give at most 10 links, best first, and link to the page where the video actually
       let html = `<h3>Free and legal online</h3>`;
       html += rows.map(freeRow).join("");
       if (webState === "busy") html += `<div class="msg"><span class="spin"></span>Gemini is searching the web for legal full-length uploads</div>`;
+      else if (webState === "idle") html += `<div class="msg">${rows.length ? "Want more? " : "Nothing on Internet Archive or Wikimedia Commons. "}Gemini can search the whole web, YouTube and official sites included, for free legal uploads. This uses one Gemini request.
+          <div class="row" style="margin-top:10px"><button type="button" class="btn tiny" id="btnWebSearch">Search the web with Gemini</button></div></div>`;
+      else if (webState === "done") html += `<p class="small">${webRows.length ? "" : "Gemini's web search found no free, legal copy. "}Web search from ${ago(saved && !runWeb ? saved.at : Date.now())}. <button type="button" class="linkbtn" id="btnWebAgain">Search again</button></p>`;
       else if (webState) html += `<div class="msg err">${webState} <button type="button" class="btn alt tiny" id="btnRetryWeb">Try again</button></div>`;
-      if (!rows.length && webState !== "busy") html += `<p class="small">No free, legal copy found online${state.gkey ? "" : " on Internet Archive or Wikimedia Commons"}.</p>`;
-      if (!state.gkey) html += `<p class="small">Add a Gemini API key in Settings and the app will also search the whole web, YouTube included, for official uploads.</p>`;
+      if (!rows.length && !state.gkey) html += `<p class="small">No free, legal copy found on Internet Archive or Wikimedia Commons.</p>`;
+      if (!state.gkey) html += `<p class="small">Add a Gemini API key in Settings and the app can also search the whole web, YouTube included, for official uploads.</p>`;
       html += note;
       const b = box(); if (!b) return;
       b.innerHTML = html;
       if (rows.length && canUpgrade) $("#verdict").textContent = `Free and legal to watch on ${listFmt([...new Set(rows.map(r => r.source))])}.`;
     };
     if (!box()) return;
-    if (!web) return render([], "");
-    render([], "busy");
-    try{ render(await web, ""); }
+    if (!state.gkey) return render([], "");
+    if (!web) return render([], "idle");
+    if (runWeb) render([], "busy");
+    try{ render(await web, "done"); }
     catch(e){ render([], "Web search with Gemini didn't work. " + explainGemini(e)); }
   }
   $("#result").addEventListener("click", e => {
-    if (!e.target.closest("#btnRetryWeb") || !lastFree) return;
+    const run = e.target.closest("#btnWebSearch, #btnRetryWeb, #btnWebAgain");
+    if (!run || !lastFree) return;
     cache.delete(`links:${lastFree.m.kind}:${lastFree.m.id}`);
-    findFreeOnline(lastFree.m, lookupSeq, lastFree.canUpgrade);
+    findFreeOnline(lastFree.m, lookupSeq, lastFree.canUpgrade, true);
   });
 
   function provRow(p, tagText, tagClass, title){
@@ -1787,15 +1798,43 @@ Give at most 10 links, best first, and link to the page where the video actually
   const wait = ms => new Promise(r => setTimeout(r, ms));
   const gErr = (code, detail) => Object.assign(new Error(code), { detail });
 
+  // Google resets daily free quotas at midnight Pacific time. A model that hits a daily cap is
+  // skipped until then, so the app never spends requests that are certain to fail.
+  function nextQuotaReset(){
+    const pt = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Los_Angeles" }));
+    return Date.now() + ((24 - pt.getHours()) * 3600 - pt.getMinutes() * 60 - pt.getSeconds()) * 1000;
+  }
+  const deadModels = () => { const d = store.get("gdead", {}); Object.keys(d).forEach(m => { if (d[m] < Date.now()) delete d[m]; }); return d; };
+  function countRequest(model){
+    const today = new Date().toDateString(), u = store.get("gusage", {});
+    const day = u.day === today ? u : { day: today, n: 0, models: {} };
+    day.n++; day.models[model] = (day.models[model] || 0) + 1;
+    store.set("gusage", day);
+  }
+  // what Google says about a quota error: which limit, how big, and whether it's per day
+  function quotaInfo(err){
+    const v = ((err.details || []).find(x => x.violations) || {}).violations || [];
+    const q = v[0] || {}, id = String(q.quotaId || q.quotaMetric || "");
+    // Google words per-minute and per-day errors the same way, so go by the quota id; with no id
+    // and no suggested wait, assume the day's allowance is gone
+    const hasWait = (err.details || []).some(x => x.retryDelay);
+    const daily = /PerDay/i.test(id) || String(q.quotaValue) === "0" || (!id && !hasWait);
+    const kind = /PerDay/i.test(id) ? "requests per day" : /PerMinute/i.test(id) ? (/token/i.test(id) ? "tokens per minute" : "requests per minute") : /search|grounding/i.test(id) ? "Google Search requests" : "";
+    return { daily, label: kind ? `${kind}${q.quotaValue ? ", limit " + q.quotaValue : ""}` : "" };
+  }
+
   async function gemini(system, user, schema, { search = false } = {}){
     let lastErr = gErr("GMODEL");
-    for (const model of GEMINI_MODELS){
+    const dead = deadModels(), usable = GEMINI_MODELS.filter(m => !dead[m]);
+    if (!usable.length) throw gErr("GDAILY", new Date(Math.min(...Object.values(dead))).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }));
+    for (const model of usable){
       let withSchema = !search && !!schema;
-      for (let attempt = 0; attempt < 3; attempt++){
+      for (let attempt = 0; attempt < 2; attempt++){
         const body = { systemInstruction: { parts: [{ text: system }] }, contents: [{ role: "user", parts: [{ text: user }] }] };
         if (search) body.tools = [{ google_search: {} }];
         else body.generationConfig = { responseMimeType: "application/json", ...(withSchema ? { responseSchema: schema } : {}) };
         let r;
+        countRequest(model);
         try{ r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
           { method: "POST", headers: { "content-type": "application/json", "x-goog-api-key": state.gkey }, body: JSON.stringify(body) }); }
         catch(e){ throw gErr("GNETWORK"); }
@@ -1822,12 +1861,22 @@ Give at most 10 links, best first, and link to the page where the video actually
         if (/API_KEY_INVALID|API key not valid|API key expired/i.test(info) || r.status === 401) throw gErr("GKEY", msg);
         if (r.status === 403 && /API key|has not been used|is disabled/i.test(msg)) throw gErr("GKEY", msg);
         if (r.status === 400 && withSchema){ withSchema = false; attempt--; continue; } // try once more without the schema
-        if (r.status === 429 || r.status >= 500){
+        if (r.status === 429){
+          const q = quotaInfo(err);
+          lastErr = gErr("GQUOTA", `${model}${q.label ? ": " + q.label : ""}`);
+          if (q.daily){ // no point retrying today; park this model until the reset
+            const d = deadModels(); d[model] = nextQuotaReset(); store.set("gdead", d);
+            break;
+          }
           const retry = info.match(/"retryDelay":"(\d+(?:\.\d+)?)s"/);
-          const delay = retry ? +retry[1] * 1000 : 1500 * (attempt + 1);
-          lastErr = gErr(r.status === 429 ? "GQUOTA" : "GBUSY", `${model}: ${msg}`);
-          if (attempt < 2 && delay <= 8000){ await wait(delay); continue; }
-          break; // long wait or still failing: try the next model's quota
+          const delay = retry ? +retry[1] * 1000 : 2000;
+          if (attempt === 0 && delay <= 8000){ await wait(delay); continue; } // per-minute limit: one patient retry
+          break;
+        }
+        if (r.status >= 500){
+          lastErr = gErr("GBUSY", `${model}: ${msg}`);
+          if (attempt === 0){ await wait(2000); continue; }
+          break;
         }
         // 403 permission, 404 unknown model, 400 tool not supported: try the next model
         lastErr = gErr(r.status === 404 ? "GMODEL" : "G", `${model}: ${msg}`);
@@ -1839,7 +1888,10 @@ Give at most 10 links, best first, and link to the page where the video actually
   function explainGemini(e){
     const more = e.detail ? ` <span class="small">(${esc(e.detail)})</span>` : "";
     if (e.message === "GKEY") return "Gemini rejected the API key. Check it in Settings." + more;
-    if (e.message === "GQUOTA") return `Gemini's free quota is used up for now, on every model the app tried. The free tier allows only a few requests a minute and a daily cap. Wait a minute, or see your limits at <a href="https://aistudio.google.com/rate-limit" target="_blank" rel="noopener">aistudio.google.com/rate-limit</a>.` + more;
+    const usage = (() => { const u = store.get("gusage", {}); return u.day === new Date().toDateString() ? ` This browser has sent ${u.n} Gemini request${u.n === 1 ? "" : "s"} today.` : ""; })();
+    const limits = ` See your exact limits at <a href="https://aistudio.google.com/rate-limit" target="_blank" rel="noopener">aistudio.google.com/rate-limit</a>.`;
+    if (e.message === "GDAILY") return `Gemini's daily free quota is used up on every model this app uses, so it's not sending more requests until it resets around ${esc(e.detail)} your time.${usage}${limits}`;
+    if (e.message === "GQUOTA") return `Gemini hit a free-tier limit on every model it tried.${usage}${limits}` + more;
     if (e.message === "GBUSY") return "Gemini's servers are overloaded right now. Try again in a minute." + more;
     if (e.message === "GNETWORK") return "Couldn't reach Gemini. Check your connection and try again.";
     if (e.message === "GMODEL") return "None of the Gemini models this app uses are available to your key." + more;
