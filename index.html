@@ -657,28 +657,115 @@ footer{margin-top:56px;padding-top:16px;border-top:2px solid var(--ink);font:500
       .map(r => ({ badge: "WC", source: "Wikimedia Commons", rights: r.lic, title: r.name, href: r.href }));
   }
 
+  // ---------- Gemini digs the web for legal full-length uploads ----------
+  // Every link is checked before it's shown: YouTube videos must exist and not be a trailer or song,
+  // Archive items must exist, and any other site must have turned up in Gemini's actual Google results.
+  const PIRATE = /torrent|magnet:|t\.me|telegram|movierulz|tamilrockers|tamilblasters|filmyzilla|filmywap|filmyhit|9xmovies|123movies|fmovies|putlocker|vegamovies|bolly4u|khatrimaza|hdhub4u|moviesflix|katmovie|isaimini|tamilyogi|einthusan|soap2day|gomovies|yts\./i;
+  const NOT_FULL = /\b(trailer|teaser|promo|song|songs|jukebox|scene|scenes|clip|clips|review|explained|reaction|recap|shorts|making of|behind the scenes|interview)\b/i;
+  const ytId = u => { const x = String(u).match(/(?:youtube\.com\/(?:watch\?(?:.*&)?v=|embed\/|live\/|shorts\/)|youtu\.be\/)([\w-]{11})/); return x && x[1]; };
+  const hostOf = u => { try{ return new URL(u).hostname.replace(/^www\.|^m\./, ""); }catch(e){ return ""; } };
+
+  function linksPrompt(m){
+    const f = movieFacts(m), noun = m.kind === "tv" ? "TV series" : "film";
+    const who = f.makers.length ? `, ${m.kind === "tv" ? "created" : "directed"} by ${listFmt(f.makers)}` : "";
+    const system = "You find free, legal ways to watch films and shows online. You use Google Search and report only links you actually found in the search results. You never invent or guess URLs.";
+    const user = `Find free, legal places to watch the full ${noun} "${m.title}" (${f.year})${m.original_title && m.original_title !== m.title ? `, original title "${m.original_title}"` : ""}${m.original_language ? `, in ${langName(m.original_language)}` : ""}${who}, for a viewer in India.
+
+Look widely. Legal means any of these:
+- an official website that hosts the ${noun} itself: the producer's or studio's own site, the director's site, a broadcaster's site, a government or cultural institution, a film institute or school, a museum, or a film festival's free screening page
+- an upload by the rights holder on a video platform, such as the production company's or music label's official YouTube, Vimeo or Dailymotion channel (for example Shemaroo, Rajshri, Ultra, Goldmines, Eros Now, Venus, Saregama, Pen Movies, NFDC, Films Division or Prasar Bharati Archives)
+- a free, ad-supported streaming service available in India, such as WAVES (Prasar Bharati), MX Player or the free sections of Zee5, SonyLIV or JioHotstar
+- a public-domain or openly licensed copy, such as on Internet Archive or Wikimedia Commons
+
+Leave out torrents, Telegram, piracy sites, re-uploads by unofficial accounts, and anything that isn't the full ${noun}: trailers, songs, clips, scenes and reviews.
+
+Search the web, then reply with only this JSON and no other text:
+{"links":[{"url":"https://...","site":"YouTube","uploader":"Shemaroo Movies","why_legal":"Official channel of the rights holder"}]}
+Give at most 10 links, best first, and link to the page where the video actually plays. If you find nothing legal, reply {"links":[]}.`;
+    return { system, user };
+  }
+
+  async function checkLink(l, m, sourceHosts){
+    const url = String(l.url || "");
+    if (!/^https?:\/\//i.test(url) || PIRATE.test(url) || PIRATE.test(l.site || "")) return null;
+    const note = l.why_legal ? String(l.why_legal) : "";
+    const id = ytId(url);
+    if (id){
+      const r = await fetch(`https://www.youtube.com/oembed?format=json&url=${encodeURIComponent("https://www.youtube.com/watch?v=" + id)}`);
+      if (!r.ok) return null; // removed, private or never existed
+      const o = await r.json();
+      if (NOT_FULL.test(o.title) && !/full movie|full film/i.test(o.title)) return null;
+      if (!titleMatch(o.title, titlesOf(m)) && !/full movie|full film/i.test(o.title)) return null;
+      return { badge: "YT", source: "YouTube", title: o.title, href: "https://www.youtube.com/watch?v=" + id, check: `Video found · uploaded by ${o.author_name}`, note };
+    }
+    const vm = url.match(/vimeo\.com\/(?:video\/|channels\/[^/]+\/)?(\d{5,})/i);
+    if (vm){
+      const r = await fetch(`https://vimeo.com/api/oembed.json?url=${encodeURIComponent("https://vimeo.com/" + vm[1])}`);
+      if (!r.ok) return null;
+      const o = await r.json();
+      if (o.duration && o.duration < minSecs(m)) return null; // a clip, not the film
+      if (NOT_FULL.test(o.title) || !titleMatch(o.title, titlesOf(m))) return null;
+      return { badge: "VM", source: "Vimeo", title: o.title, href: "https://vimeo.com/" + vm[1],
+        check: `Video found · uploaded by ${o.author_name}${o.duration ? ` · ${Math.round(o.duration / 60)} min` : ""}`, note };
+    }
+    const ia = url.match(/archive\.org\/details\/([^/?#]+)/i);
+    if (ia){
+      // same rule as the app's own Archive search: open licence, or public domain and old enough
+      const md = (await (await fetch(`https://archive.org/metadata/${encodeURIComponent(ia[1])}/metadata`)).json()).result;
+      if (!md || !md.title) return null;
+      const lic = String(md.licenseurl || ""), cols = [].concat(md.collection || []).map(c => String(c).toLowerCase());
+      const pd = /publicdomain|\/zero\//i.test(lic) || (!lic && cols.some(c => IA_TRUSTED.includes(c)));
+      const rights = /creativecommons/i.test(lic) && !pd ? "Creative Commons licence" : pd && oldEnough(m) ? PD_LABEL : "";
+      if (!rights) return null;
+      return { badge: "IA", source: "Internet Archive", title: String(md.title), href: "https://archive.org/details/" + ia[1], check: "Item found on Internet Archive · " + rights, note };
+    }
+    const host = hostOf(url);
+    if (!host || !sourceHosts.some(h => h === host || h.endsWith("." + host) || host.endsWith("." + h))) return null;
+    return { badge: "WWW", source: l.site || host, title: l.uploader && l.uploader !== l.site ? `${l.site || host} · ${l.uploader}` : l.site || host, href: url, check: `Page found in Google Search results · ${host}`, note };
+  }
+
+  async function searchWebLinks(m){
+    const { system, user } = linksPrompt(m);
+    const { json, sources } = await gemini(system, user, null, { search: true });
+    // grounding chunks carry the page's site name as the title; their URIs are Google redirects
+    const sourceHosts = sources.map(w => String(w.title || "").toLowerCase().replace(/^www\./, "")).filter(Boolean);
+    const checked = await Promise.all((json.links || []).slice(0, 10).map(l => checkLink(l, m, sourceHosts).catch(() => null)));
+    const seen = new Set();
+    return checked.filter(r => r && !seen.has(r.href) && seen.add(r.href));
+  }
+
+  const freeRow = r => `<div class="prov">
+      <span class="badge" aria-hidden="true">${r.badge}</span>
+      <div><div class="n">${esc(r.title)}</div>
+        <div class="tag good">${esc(r.check || `${r.source}: ${r.rights}`)}</div>
+        ${r.note ? `<div class="tag">${esc(r.note)}</div>` : ""}</div>
+      <a class="btn alt tiny go" href="${esc(r.href)}" target="_blank" rel="noopener">Watch</a>
+    </div>`;
+
   async function findFreeOnline(m, seq, canUpgrade){
+    const web = state.gkey ? cached(`links:${m.kind}:${m.id}`, () => searchWebLinks(m)) : null;
     const [ia, wc] = await Promise.all([searchArchive(m).catch(() => null), searchCommons(m).catch(() => null)]);
-    const box = $("#freeNet");
-    if (seq !== lookupSeq || !box) return;
-    const rows = [...(ia || []), ...(wc || [])];
-    const q = encodeURIComponent(m.title);
-    let html = `<h3>Free and legal online</h3>`;
-    if (rows.length) html += rows.map(r => `<div class="prov">
-        <span class="badge" aria-hidden="true">${r.badge}</span>
-        <div><div class="n">${esc(r.title)}</div><div class="tag good">${esc(r.source)}: ${esc(r.rights)}</div></div>
-        <a class="btn alt tiny go" href="${esc(r.href)}" target="_blank" rel="noopener">Watch</a>
-      </div>`).join("");
-    else if (!ia && !wc) html += `<p class="small">Couldn't reach Internet Archive or Wikimedia Commons. Try the links below.</p>`;
-    else html += `<p class="small">No public-domain or openly licensed copy found on Internet Archive or Wikimedia Commons.</p>`;
-    html += `<div class="row" style="margin-top:8px">
-        <a class="btn alt tiny" href="https://archive.org/search?query=${q}&amp;and%5B%5D=mediatype%3A%22movies%22" target="_blank" rel="noopener">Search Internet Archive</a>
-        <a class="btn alt tiny" href="https://commons.wikimedia.org/w/index.php?title=Special:MediaSearch&amp;type=video&amp;search=${q}" target="_blank" rel="noopener">Search Wikimedia Commons</a>
-      </div>
-      <p class="small" style="margin-top:8px">Shows only copies with an open licence, or labelled public domain and more than 60 years past release (India's copyright term for films). Labels come from the uploader or the site, so check the item's page.</p>`;
-    box.innerHTML = html;
-    if (rows.length && canUpgrade)
-      $("#verdict").textContent = `Free to watch on ${listFmt([...new Set(rows.map(r => r.source))])}, labelled public domain or openly licensed.`;
+    const box = () => seq === lookupSeq && $("#freeNet");
+    const archived = [...(ia || []), ...(wc || [])];
+    const note = `<p class="small" style="margin-top:8px">Archive and Commons copies are shown only with an open licence, or when labelled public domain and more than 60 years past release (India's copyright term for films).${state.gkey ? " Web links come from Gemini's Google searches and are checked by the app before they're shown, but check who uploaded a video before you rely on it." : ""}</p>`;
+    const render = (webRows, webState) => {
+      const rows = [...webRows, ...archived.filter(a => !webRows.some(w => w.href === a.href))];
+      let html = `<h3>Free and legal online</h3>`;
+      html += rows.map(freeRow).join("");
+      if (webState === "busy") html += `<div class="msg"><span class="spin"></span>Gemini is searching the web for legal full-length uploads</div>`;
+      else if (webState) html += `<p class="small">${webState}</p>`;
+      if (!rows.length && webState !== "busy") html += `<p class="small">No free, legal copy found online${state.gkey ? "" : " on Internet Archive or Wikimedia Commons"}.</p>`;
+      if (!state.gkey) html += `<p class="small">Add a Gemini API key in Settings and the app will also search the whole web, YouTube included, for official uploads.</p>`;
+      html += note;
+      const b = box(); if (!b) return;
+      b.innerHTML = html;
+      if (rows.length && canUpgrade) $("#verdict").textContent = `Free and legal to watch on ${listFmt([...new Set(rows.map(r => r.source))])}.`;
+    };
+    if (!box()) return;
+    if (!web) return render([], "");
+    render([], "busy");
+    try{ render(await web, ""); }
+    catch(e){ render([], "Web search with Gemini didn't work: " + explainGemini(e)); }
   }
 
   function provRow(p, tagText, tagClass, title){
@@ -1171,20 +1258,28 @@ footer{margin-top:56px;padding-top:16px;border-top:2px solid var(--ink);font:500
   let gemBusy = false, gemErr = null;
   const gemDone = () => taste.gemini.picks.every(p => p.id in taste.gemini.answers);
 
-  async function gemini(system, user, schema){
+  // With search, Gemini runs Google searches and we also return the pages it actually saw.
+  // Search can't be combined with forced JSON output, so the JSON is pulled out of the reply text.
+  async function gemini(system, user, schema, { search = false } = {}){
     let lastErr = new Error("GMODEL");
     for (const model of GEMINI_MODELS){
-      for (const withSchema of [true, false]){
-        const body = { systemInstruction: { parts: [{ text: system }] }, contents: [{ role: "user", parts: [{ text: user }] }],
-          generationConfig: { responseMimeType: "application/json", ...(withSchema ? { responseSchema: schema } : {}) } };
+      for (const withSchema of search ? [false] : [true, false]){
+        const body = { systemInstruction: { parts: [{ text: system }] }, contents: [{ role: "user", parts: [{ text: user }] }] };
+        if (search) body.tools = [{ google_search: {} }];
+        else body.generationConfig = { responseMimeType: "application/json", ...(withSchema ? { responseSchema: schema } : {}) };
         let r;
         try{ r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
           { method: "POST", headers: { "content-type": "application/json", "x-goog-api-key": state.gkey }, body: JSON.stringify(body) }); }
         catch(e){ throw new Error("GNETWORK"); }
         const d = await r.json().catch(() => ({}));
         if (r.ok){
-          const text = ((d.candidates && d.candidates[0] && d.candidates[0].content && d.candidates[0].content.parts) || []).map(x => x.text || "").join("");
-          return JSON.parse(text.replace(/^\s*```(?:json)?|```\s*$/g, ""));
+          const cand = (d.candidates && d.candidates[0]) || {};
+          const text = ((cand.content && cand.content.parts) || []).map(x => x.text || "").join("");
+          const a = text.indexOf("{"), b = text.lastIndexOf("}");
+          const json = JSON.parse(a >= 0 && b > a ? text.slice(a, b + 1) : text);
+          if (!search) return json;
+          const gm = cand.groundingMetadata || {};
+          return { json, sources: (gm.groundingChunks || []).map(c => c.web || {}).filter(w => w.uri || w.title) };
         }
         const err = d.error || {}, info = (err.message || "") + JSON.stringify(err.details || "");
         if (/API_KEY_INVALID|API key not valid/i.test(info) || r.status === 401 || r.status === 403) throw new Error("GKEY");
