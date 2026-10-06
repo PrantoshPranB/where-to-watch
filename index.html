@@ -182,6 +182,44 @@ fieldset.q legend{display:flex;align-items:baseline;flex-wrap:wrap;gap:4px 12px;
 .keys{margin-top:14px;font:500 11px/1 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
 kbd{font:inherit;border:1.5px solid var(--hair);border-radius:3px;padding:2px 5px}
 
+/* taste test */
+.progress{display:flex;align-items:center;gap:14px;margin:-4px 0 22px;font:600 12px/1 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.progress .bar{flex:1;height:10px;border:2px solid var(--line);border-radius:2px;background:var(--paper);overflow:hidden}
+.progress .bar i{display:block;height:100%;width:0;background:var(--red);transition:width .3s}
+.learn-foot{justify-content:space-between;margin-top:14px}
+.learn-foot .keys{margin:0}
+.rate{grid-column:1/-1;padding:16px;border-top:2px dashed var(--perf);background:var(--soft)}
+.rate-q{display:flex;justify-content:space-between;align-items:baseline;font:400 22px/1.1 var(--display);margin-bottom:12px}
+.rate-btns{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+.rbtn{appearance:none;cursor:pointer;padding:14px 4px 12px;border:2px solid var(--ink);border-radius:4px;background:var(--paper);font:600 12px/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;transition:transform .12s, box-shadow .12s}
+.rbtn b{display:block;font:400 26px/1 var(--display);margin-bottom:6px}
+.rbtn:hover{transform:translate(-2px,-2px);box-shadow:3px 3px 0 var(--ink)}
+.rbtn.r2{background:var(--good);color:#FFF4E2;border-color:var(--good)}
+.rbtn.r1{border-color:var(--good);color:var(--good)}
+.rbtn.r-1{border-color:var(--red);color:var(--red)}
+.rbtn.r-2{background:var(--red);color:var(--on-red);border-color:var(--red)}
+.taste-cols{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin:8px 0 6px}
+.taste-cols h3{font:600 12px/1 var(--mono);letter-spacing:.16em;text-transform:uppercase;margin:0 0 10px;color:var(--muted)}
+.chip.static{cursor:default;transform:none}
+.chip.plus{border-color:var(--good);color:var(--good)}
+.chip.minus{border-color:var(--red);color:var(--red)}
+.match .pct{color:var(--red);font-weight:600}
+.match .why{font-size:14px;margin-top:3px}
+.match .where{font-size:13px;margin-top:3px}
+.match .acts{margin-left:auto;display:flex;gap:8px;flex:none;align-items:center}
+.match .rate-btns{flex-basis:100%;margin-top:8px}
+.match .rbtn{padding:10px 4px}
+.match .rbtn b{font-size:20px;margin-bottom:4px}
+
+.pick-why{font-size:15px;padding:10px 12px;margin:0 0 14px;background:var(--soft);border-left:3px solid var(--gold)}
+.pick-why b{font:600 11px/1 var(--mono);letter-spacing:.14em;text-transform:uppercase;display:block;margin-bottom:5px;color:var(--muted)}
+.want-btns{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.want-btns .btn{padding:16px 8px;text-align:center}
+.gem{margin-top:44px;padding:22px;border:2px solid var(--line);border-radius:6px;background:var(--paper)}
+.gem h2{margin:0 0 6px;display:flex;align-items:center;gap:10px}
+.gem .ai{font:600 10px/1 var(--mono);letter-spacing:.16em;text-transform:uppercase;color:#17110C;background:var(--gold);padding:5px 7px 4px;border-radius:2px}
+.gem .score{font:600 12px/1.4 var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:4px 0 14px}
+
 /* watchlist */
 .wl{border-top:2px solid var(--ink)}
 .wl-item{display:flex;align-items:center;gap:14px;padding:12px 0;border-bottom:1px dashed var(--hair)}
@@ -207,7 +245,9 @@ footer{margin-top:56px;padding-top:16px;border-top:2px solid var(--ink);font:500
   .pick-poster{border-right:2px solid #17110C;border-bottom:2px solid #17110C;align-self:start}
   .pick-body{padding:14px 16px}
   .pick-title{font-size:26px}
-  .wl-item{flex-wrap:wrap}.wl-item .go{margin-left:54px}
+  .wl-item{flex-wrap:wrap}.wl-item .go,.match .acts{margin-left:54px}
+  .taste-cols{grid-template-columns:1fr}
+  .rate-btns{gap:5px}.rbtn{font-size:10px;letter-spacing:.02em}
 }
 </style>
 </head>
@@ -239,6 +279,10 @@ footer{margin-top:56px;padding-top:16px;border-top:2px solid var(--ink);font:500
         <input type="password" id="inKey" autocomplete="off" required>
       </label>
       <p class="small">Get one free at <a href="https://www.themoviedb.org/settings/api" target="_blank" rel="noopener">themoviedb.org/settings/api</a>. Either the short "API key" or the long "Read access token" works.</p>
+      <label class="field" style="margin-top:20px"><span>Gemini API key (optional)</span>
+        <input type="password" id="inGemini" autocomplete="off" placeholder="For AI picks in For you">
+      </label>
+      <p class="small">Get one at <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com/apikey</a>. When you ask for AI picks, your genres, ratings and not-watched films are sent to Google's Gemini.</p>
       <div id="setupMsg"></div>
       <button class="btn" type="submit" id="btnSetup">Continue</button>
     </form>
@@ -280,26 +324,33 @@ footer{margin-top:56px;padding-top:16px;border-top:2px solid var(--ink);font:500
     <div id="result"></div>
   </section>
 
-  <!-- Taste quiz -->
+  <!-- Taste test, step 1: genres -->
   <section id="view-quiz" hidden>
-    <p class="kicker">Taste test · six quick questions</p>
-    <h1>What's your kind of film?</h1>
-    <p class="lede">Pick as many as you like. Leave a question empty to keep it wide open.</p>
+    <p class="kicker">Taste test · step 1</p>
+    <h1>Which genres are you into?</h1>
+    <p class="lede">Pick a few. Next you'll see well-known films in them. Tell us which ones you've seen and how they were. After about 25, the app knows your taste.</p>
     <form id="quizForm">
       <div id="quizBody"></div>
       <div class="sticky row">
-        <button class="btn" type="submit" id="btnQuiz">Show me films</button>
+        <button class="btn" type="submit" id="btnQuiz">Start rating</button>
+        <span class="small" id="quizCount"></span>
       </div>
     </form>
   </section>
 
-  <!-- Suggestions -->
+  <!-- Taste test, step 2 (rating) and results -->
   <section id="view-suggest" hidden>
-    <p class="kicker">For you <button type="button" class="linkbtn" id="btnEditTaste">Edit taste</button></p>
-    <h1>Seen this one?</h1>
-    <div id="suggestBox"></div>
-    <p class="keys" id="keysHint" hidden>Keyboard: <kbd>W</kbd> watched · <kbd>N</kbd> not watched</p>
-    <div id="watchlist"></div>
+    <div id="learnView">
+      <p class="kicker"><span id="learnKicker">Taste test · step 2</span> <button type="button" class="linkbtn" id="btnEditTaste">Change genres</button></p>
+      <h1>Seen this one?</h1>
+      <div class="progress" aria-live="polite"><div class="bar"><i id="progBar"></i></div><span id="progText"></span></div>
+      <div id="suggestBox"></div>
+      <div class="row learn-foot">
+        <p class="keys" id="keysHint" hidden></p>
+        <button type="button" class="linkbtn" id="btnEarly" hidden>See my matches</button>
+      </div>
+    </div>
+    <div id="tasteView" hidden></div>
   </section>
 
   <footer>
@@ -321,7 +372,7 @@ footer{margin-top:56px;padding-top:16px;border-top:2px solid var(--ink);font:500
     get(k, d){ try{ const v = localStorage.getItem("w2w:"+k); return v ? JSON.parse(v) : d; }catch(e){ return d; } },
     set(k, v){ try{ localStorage.setItem("w2w:"+k, JSON.stringify(v)); }catch(e){} }
   };
-  const state = { name: store.get("name",""), key: store.get("key",""), subs: store.get("subs",[]) };
+  const state = { name: store.get("name",""), key: store.get("key",""), gkey: store.get("gkey",""), subs: store.get("subs",[]) };
 
   // ---------- helpers ----------
   const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -375,12 +426,12 @@ footer{margin-top:56px;padding-top:16px;border-top:2px solid var(--ink);font:500
   // ---------- step 1 ----------
   $("#setupForm").addEventListener("submit", async e => {
     e.preventDefault();
-    const name = $("#inName").value.trim(), key = $("#inKey").value.trim();
+    const name = $("#inName").value.trim(), key = $("#inKey").value.trim(), gkey = $("#inGemini").value.trim();
     $("#btnSetup").disabled = true;
     $("#setupMsg").innerHTML = spinner("Checking your key");
     try{
       await tmdb("/authentication", {}, key);
-      state.key = key; state.name = name; store.set("name", name); store.set("key", key);
+      state.key = key; state.name = name; state.gkey = gkey; store.set("name", name); store.set("key", key); store.set("gkey", gkey);
       $("#setupMsg").innerHTML = "";
       await openApps();
     }catch(err){
@@ -430,12 +481,12 @@ footer{margin-top:56px;padding-top:16px;border-top:2px solid var(--ink);font:500
   });
   $("#appFilter").addEventListener("input", renderApps);
   $("#btnSaveApps").addEventListener("click", () => {
-    state.subs = [...picked]; store.set("subs", state.subs); myIds = null;
+    state.subs = [...picked]; store.set("subs", state.subs);
     show("search"); $("#inQuery").focus();
   });
 
   $("#btnSettings").addEventListener("click", () => {
-    $("#inName").value = state.name; $("#inKey").value = state.key;
+    $("#inName").value = state.name; $("#inKey").value = state.key; $("#inGemini").value = state.gkey;
     show("setup");
   });
 
@@ -687,88 +738,73 @@ footer{margin-top:56px;padding-top:16px;border-top:2px solid var(--ink);font:500
     return !mine.length && !free.length;
   }
 
-  // ---------- taste quiz ----------
-  const QUIZ = [
-    { key: "genres", q: "Genres you love", multi: true, opts: [] }, // filled from TMDB
-    { key: "langs", q: "Languages you watch in", multi: true, opts: [["hi","Hindi"],["en","English"],["ta","Tamil"],["te","Telugu"],["ml","Malayalam"],["bn","Bengali"],["kn","Kannada"],["mr","Marathi"],["ko","Korean"],["ja","Japanese"],["es","Spanish"],["fr","French"]] },
-    { key: "eras", q: "Which era?", multi: true, opts: [["old","Classics, before 1970"],["70s","1970 to 1999"],["00s","2000 to 2014"],["new","2015 onwards"]] },
-    { key: "pick", q: "What kind of pick?", def: "mix", opts: [["crowd","Crowd-pleasers"],["acclaimed","Critically loved"],["gems","Hidden gems"],["mix","Surprise me"]] },
-    { key: "length", q: "How long can it be?", def: "any", opts: [["any","Any length"],["short","Under 2 hours"]] },
-    { key: "where", q: "Only suggest films on your apps?", def: "any", opts: [["mine","Yes, only my apps"],["any","No, anything goes"]] }
-  ];
-  const defaultPrefs = () => Object.fromEntries(QUIZ.map(q => [q.key, q.multi ? [] : q.def]));
-  let prefs = store.get("prefs", null), draft = null, genreMap = null;
-  const seen = new Set(store.get("seen", []));
-  let watchlist = store.get("watchlist", []);
+  // ---------- taste test ----------
+  // Step 1 picks genres. Step 2 shows well-known films in them: "Not watched" goes to a hidden
+  // list, "Watched" asks for a rating. Ratings build a profile of genres, languages and decades,
+  // which ranks recommendations once there are enough of them.
+  const RATINGS = [[2, "Great", "★"], [1, "Good", "+"], [0, "Okay", "~"], [-1, "Meh", "−"], [-2, "Yuck", "✕"]];
+  const TARGET = 25, EARLY = 10;
+  let genreMap = null, genreList = [], draftGenres = new Set();
+
+  let taste = store.get("taste", null);
+  if (!taste){
+    // carry over the earlier watched / watchlist version
+    const old = store.get("prefs", null);
+    taste = { genres: old ? old.genres.map(Number) : [], ratings: {}, secret: {}, skip: store.get("seen", []) };
+    store.get("watchlist", []).forEach(w => taste.secret[w.id] = { t: w.title, ot: w.original_title, d: w.date, p: w.poster, g: [], l: "", v: 0 });
+  }
+  const saveTaste = () => store.set("taste", taste);
+  const rated = () => Object.keys(taste.ratings).length;
+  const brief = m => ({ t: m.title, ot: m.original_title, d: m.release_date || "", p: m.poster_path, g: m.genre_ids || [], l: m.original_language || "", v: m.vote_average || 0 });
+  const unbrief = (id, b) => ({ id: +id, title: b.t, original_title: b.ot, release_date: b.d, poster_path: b.p, genre_ids: b.g, original_language: b.l, vote_average: b.v });
+  const decade = d => /^\d{4}/.test(d || "") ? d.slice(0,3) + "0s" : "";
+  const known = id => id in taste.ratings || id in taste.secret || taste.skip.includes(id);
 
   async function ensureGenres(){
     if (genreMap) return;
     const d = await tmdb("/genre/movie/list", { language: "en-US" });
+    genreList = d.genres;
     genreMap = Object.fromEntries(d.genres.map(g => [g.id, g.name]));
-    QUIZ[0].opts = d.genres.map(g => [String(g.id), g.name]);
   }
 
   async function openQuiz(){
     show("quiz");
-    draft = { ...defaultPrefs(), ...(prefs || {}) };
+    draftGenres = new Set(taste.genres);
     $("#quizBody").innerHTML = spinner("Loading genres");
     try{ await ensureGenres(); renderQuiz(); }
     catch(err){ $("#quizBody").innerHTML = errBox(explain(err)); }
   }
   function renderQuiz(){
-    $("#quizBody").innerHTML = QUIZ.map((q,i) => `<fieldset class="q">
-      <legend><span class="qn">${String(i+1).padStart(2,"0")}</span>${esc(q.q)}${q.multi ? `<span class="hint">Pick any</span>` : ""}</legend>
-      <div class="chips" data-key="${q.key}">${q.opts.map(([v,l]) => {
-        const on = q.multi ? draft[q.key].includes(v) : draft[q.key] === v;
-        return `<button type="button" class="chip" data-v="${esc(v)}" aria-pressed="${on}">${esc(l)}</button>`;
-      }).join("")}</div>
-    </fieldset>`).join("");
+    $("#quizBody").innerHTML = `<div class="chips">${genreList.map(g =>
+      `<button type="button" class="chip" data-v="${g.id}" aria-pressed="${draftGenres.has(g.id)}">${esc(g.name)}</button>`).join("")}</div>`;
+    $("#quizCount").textContent = draftGenres.size ? `${draftGenres.size} picked` : "Pick at least one";
+    $("#btnQuiz").disabled = !draftGenres.size;
   }
   $("#quizBody").addEventListener("click", e => {
     const c = e.target.closest(".chip"); if (!c) return;
-    const key = c.parentElement.dataset.key, v = c.dataset.v, q = QUIZ.find(x => x.key === key);
-    if (q.multi) draft[key] = draft[key].includes(v) ? draft[key].filter(x => x !== v) : [...draft[key], v];
-    else draft[key] = v;
+    const id = +c.dataset.v;
+    draftGenres.has(id) ? draftGenres.delete(id) : draftGenres.add(id);
     renderQuiz();
   });
   $("#quizForm").addEventListener("submit", e => {
     e.preventDefault();
-    prefs = draft; store.set("prefs", prefs);
-    show("suggest"); startSuggestions(); renderWatchlist();
+    if (!draftGenres.size) return;
+    taste.genres = [...draftGenres]; saveTaste();
+    lanes = []; current = null;
+    startLearning();
   });
   $("#btnEditTaste").addEventListener("click", openQuiz);
 
-  // ---------- suggestions ----------
-  // Each combination of language, era and pick style is a "lane" with its own TMDB discover pages.
-  // Picks rotate across lanes so one language or decade doesn't flood the queue.
-  const ERAS = { old: [null, "1969-12-31"], "70s": ["1970-01-01", "1999-12-31"], "00s": ["2000-01-01", "2014-12-31"], new: ["2015-01-01", null] };
-  const SORTS = {
-    crowd: { sort_by: "popularity.desc", "vote_count.gte": 100 },
-    acclaimed: { sort_by: "vote_average.desc", "vote_count.gte": 150 },
-    gems: { sort_by: "vote_average.desc", "vote_average.gte": 7, "vote_count.gte": 25, "vote_count.lte": 400 }
-  };
+  // ---------- step 2: rate what you've seen ----------
+  // One lane per genre for Indian films and one for everything else, most-voted first,
+  // so the films are ones people are likely to have seen.
   const shuffle = a => { for (let i = a.length - 1; i > 0; i--){ const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
-  const inWatchlist = id => watchlist.some(w => w.id === id);
-  let lanes = [], cursor = 0, shown = new Set(), current = null, pending = null, myIds = null;
+  // deck is "learn" (step 2) or "gemini" (the AI picks); stage is "choose", "rate" or "want"
+  let lanes = [], cursor = 0, shown = new Set(), current = null, pending = null, stage = "choose", deck = "learn";
 
-  async function providerIds(){
-    if (myIds) return myIds;
-    const d = await tmdb("/watch/providers/movie", { watch_region: REGION });
-    myIds = d.results.filter(p => state.subs.includes(norm(p.provider_name))).map(p => p.provider_id);
-    return myIds;
-  }
-
-  async function laneParams(lane){
-    const p = { include_adult: "false", language: "en-US", page: lane.page, ...SORTS[lane.sort] };
-    if (prefs.genres.length) p.with_genres = prefs.genres.join("|");
-    if (lane.lang) p.with_original_language = lane.lang;
-    if (lane.era){ const [a,b] = ERAS[lane.era]; if (a) p["primary_release_date.gte"] = a; if (b) p["primary_release_date.lte"] = b; }
-    if (prefs.length === "short") p["with_runtime.lte"] = 120;
-    if (prefs.where === "mine"){
-      const ids = await providerIds();
-      if (ids.length) Object.assign(p, { watch_region: REGION, with_watch_providers: ids.join("|"), with_watch_monetization_types: "flatrate|free|ads" });
-    }
-    return p;
+  function buildLanes(){
+    lanes = shuffle(taste.genres.flatMap(g => [true, false].map(india => ({ g, india, page: 0, total: 1, buf: [] }))));
+    cursor = 0; shown = new Set(); pending = null; current = null;
   }
 
   async function nextPick(){
@@ -777,13 +813,14 @@ footer{margin-top:56px;padding-top:16px;border-top:2px solid var(--ink);font:500
       if (!lane.buf.length){
         if (lane.page >= lane.total){ lanes.splice(lanes.indexOf(lane), 1); continue; }
         lane.page++;
-        const d = await tmdb("/discover/movie", await laneParams(lane));
-        lane.total = Math.min(d.total_pages || 0, 30);
+        const d = await tmdb("/discover/movie", { include_adult: "false", language: "en-US", sort_by: "vote_count.desc",
+          with_genres: lane.g, page: lane.page, ...(lane.india ? { with_origin_country: "IN", "vote_count.gte": 50 } : { "vote_count.gte": 1000 }) });
+        lane.total = Math.min(d.total_pages || 0, 20);
         lane.buf = shuffle((d.results || []).filter(m => m.poster_path));
       }
       while (lane.buf.length){
         const m = lane.buf.shift();
-        if (!seen.has(m.id) && !inWatchlist(m.id) && !shown.has(m.id)){
+        if (!known(m.id) && !shown.has(m.id)){
           shown.add(m.id);
           new Image().src = IMG + "w342" + m.poster_path; // warm the poster
           return m;
@@ -794,20 +831,42 @@ footer{margin-top:56px;padding-top:16px;border-top:2px solid var(--ink);font:500
   }
   const prefetch = () => { if (!pending) pending = nextPick().catch(() => null); };
 
-  function startSuggestions(){
-    const langs = prefs.langs.length ? prefs.langs : [null];
-    const eras = prefs.eras.length ? prefs.eras : [null];
-    const sorts = prefs.pick === "mix" ? Object.keys(SORTS) : [prefs.pick];
-    lanes = [];
-    langs.forEach(lang => eras.forEach(era => sorts.forEach(sort => lanes.push({ lang, era, sort, page: 0, total: 1, buf: [] }))));
-    shuffle(lanes);
-    cursor = 0; shown = new Set(); pending = null; current = null;
-    advance();
+  function startLearning(){
+    if (!taste.genres.length) return openQuiz();
+    if (deck !== "learn"){ deck = "learn"; current = null; }
+    show("suggest");
+    $("#learnView").hidden = false; $("#tasteView").hidden = true;
+    $("#learnKicker").textContent = "Taste test · step 2"; $("#btnEditTaste").hidden = false;
+    if (!lanes.length || !current) buildLanes();
+    renderProgress();
+    current ? renderPick(current) : advance();
+  }
+
+  function renderProgress(){
+    if (deck === "gemini"){
+      const picks = taste.gemini.picks, done = picks.filter(p => p.id in taste.gemini.answers).length;
+      $("#progBar").style.width = done / picks.length * 100 + "%";
+      $("#progText").textContent = `${done} of ${picks.length} answered`;
+      $("#btnEarly").hidden = true;
+      return;
+    }
+    const n = rated();
+    $("#progBar").style.width = Math.min(100, n / TARGET * 100) + "%";
+    $("#progText").textContent = n < TARGET ? `${n} of ${TARGET} rated` : `${n} rated`;
+    $("#btnEarly").hidden = n < EARLY;
+    $("#btnEarly").textContent = n < TARGET ? "Peek at my matches" : "See my matches";
   }
 
   async function advance(){
+    stage = "choose";
     $("#keysHint").hidden = true;
-    $("#suggestBox").innerHTML = spinner("Finding something you'll like");
+    if (deck === "gemini"){
+      const p = taste.gemini.picks.find(p => !(p.id in taste.gemini.answers));
+      current = p ? { ...unbrief(p.id, p), overview: p.o, why: p.why, rank: p.rank } : null;
+      renderProgress();
+      return current ? renderPick(current) : showTaste(false);
+    }
+    $("#suggestBox").innerHTML = spinner("Finding a film you might know");
     let m;
     try{ await ensureGenres(); m = await (pending || nextPick()); pending = null; }
     catch(err){
@@ -817,103 +876,441 @@ footer{margin-top:56px;padding-top:16px;border-top:2px solid var(--ink);font:500
     }
     current = m;
     if (!m){
-      $("#suggestBox").innerHTML = `<div class="msg">That's everything matching your taste. Widen it with more genres, languages or eras.
-        <div class="row" style="margin-top:10px"><button type="button" class="btn alt tiny" id="btnWiden">Edit taste</button></div></div>`;
+      $("#suggestBox").innerHTML = `<div class="msg">You've been through every well-known film in these genres. Add a few more genres to keep going${rated() >= EARLY ? ", or see your matches" : ""}.
+        <div class="row" style="margin-top:10px"><button type="button" class="btn alt tiny" id="btnWiden">Change genres</button></div></div>`;
       return;
     }
     renderPick(m);
     prefetch();
   }
 
+  const genresOf = m => (m.genre_ids || []).map(id => genreMap && genreMap[id]).filter(Boolean);
   function renderPick(m){
     const year = (m.release_date || "").slice(0,4);
-    const meta = [year, m.original_language ? langName(m.original_language) : "", m.vote_count ? `<span class="star">★</span> ${m.vote_average.toFixed(1)}` : ""].filter(Boolean);
-    const genres = (m.genre_ids || []).map(id => genreMap && genreMap[id]).filter(Boolean).slice(0,3);
+    const meta = [esc(year), m.original_language ? esc(langName(m.original_language)) : "", m.vote_count ? `<span class="star">★</span> ${m.vote_average.toFixed(1)}` : ""].filter(Boolean);
+    const genres = [...new Set(genresOf(m))].slice(0,3);
     $("#suggestBox").innerHTML = `<article class="pick" id="pick">
       <img class="pick-poster" src="${IMG}w342${m.poster_path}" alt="Poster for ${esc(m.title)}">
       <div class="pick-body">
-        <div class="pick-meta">${meta.map(x => x.startsWith("<") ? x : esc(x)).join(" · ")}</div>
+        <div class="pick-meta">${meta.join(" · ")}</div>
         <h2 class="pick-title">${esc(m.title)}</h2>
         ${m.original_title && m.original_title !== m.title ? `<div class="pick-orig">${esc(m.original_title)}</div>` : ""}
         ${genres.length ? `<div class="pick-genres">${esc(genres.join(" / "))}</div>` : ""}
+        ${m.why ? `<div class="pick-why"><b>Gemini's pick #${m.rank}</b>${esc(m.why)}</div>` : ""}
         ${m.overview ? `<p class="pick-overview">${esc(m.overview)}</p>` : ""}
-        <div class="pick-where" id="pickWhere"><span class="spin"></span>Checking where it's streaming</div>
       </div>
-      <div class="pick-actions">
+      <div class="pick-actions" id="pickActions">
         <button type="button" class="btn alt" data-act="seen">Watched</button>
-        <button type="button" class="btn" data-act="want">Not watched</button>
+        <button type="button" class="btn" data-act="unseen">Not watched</button>
       </div>
     </article>`;
-    $("#keysHint").hidden = !matchMedia("(hover: hover)").matches;
-    pickWhere(m);
+    setKeys("Keyboard: <kbd>W</kbd> watched · <kbd>N</kbd> not watched");
+  }
+  const rateButtons = () => RATINGS.map(([v, l, g]) => `<button type="button" class="rbtn r${v}" data-rate="${v}"><b aria-hidden="true">${g}</b>${l}</button>`).join("");
+  function setKeys(html){ $("#keysHint").innerHTML = html; $("#keysHint").hidden = !matchMedia("(hover: hover)").matches; }
+
+  function askWant(){
+    stage = "want";
+    $("#pickActions").outerHTML = `<div class="rate" id="pickActions">
+      <div class="rate-q">Want to watch it? <button type="button" class="linkbtn" data-act="back">Back</button></div>
+      <div class="want-btns"><button type="button" class="btn" data-act="want">Yes, I'd watch it</button><button type="button" class="btn alt" data-act="nowant">No, not for me</button></div>
+    </div>`;
+    $("#pickActions .btn").focus();
+    setKeys("Keyboard: <kbd>Y</kbd> yes · <kbd>N</kbd> no · <kbd>Esc</kbd> back");
   }
 
-  async function pickWhere(m){
+  function askRating(){
+    stage = "rate";
+    $("#pickActions").outerHTML = `<div class="rate" id="pickActions">
+      <div class="rate-q">How was it? <button type="button" class="linkbtn" data-act="back">Back</button></div>
+      <div class="rate-btns">${rateButtons()}</div>
+    </div>`;
+    $("#pickActions .rbtn").focus();
+    setKeys("Keyboard: <kbd>1</kbd> great … <kbd>5</kbd> yuck · <kbd>Esc</kbd> back");
+  }
+
+  function leave(dir){
+    const card = $("#pick");
+    card.querySelectorAll("button").forEach(b => b.disabled = true);
+    card.classList.add(dir);
+    const finished = deck === "learn" && rated() === TARGET && dir === "out-r";
+    setTimeout(() => finished ? showTaste(true) : advance(), matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 200);
+  }
+
+  function decide(act, value){
+    const m = current, card = $("#pick");
+    if (!m || !card || card.classList.contains("out-l") || card.classList.contains("out-r")) return;
+    if (act === "seen") return askRating();
+    if (act === "back"){ stage = "choose"; return renderPick(m); }
+    if (deck === "gemini"){
+      const ans = taste.gemini.answers;
+      if (act === "unseen") return askWant();
+      if (act === "want" || act === "nowant"){
+        ans[m.id] = { seen: false, want: act === "want" };
+        if (act === "nowant") taste.skip.push(m.id);
+        saveTaste(); renderProgress(); current = null; return leave(act === "want" ? "out-r" : "out-l");
+      }
+      if (act === "rate"){
+        ans[m.id] = { seen: true, s: value };
+        taste.ratings[m.id] = { ...brief(m), s: value };
+        saveTaste(); renderProgress(); current = null; return leave("out-r");
+      }
+    }
+    if (act === "unseen"){ taste.secret[m.id] = brief(m); saveTaste(); current = null; return leave("out-l"); }
+    if (act === "rate"){ taste.ratings[m.id] = { ...brief(m), s: value }; saveTaste(); renderProgress(); current = null; return leave("out-r"); }
+  }
+
+  $("#suggestBox").addEventListener("click", e => {
+    const a = e.target.closest("[data-act]"); if (a) return decide(a.dataset.act);
+    const r = e.target.closest("[data-rate]"); if (r) return decide("rate", +r.dataset.rate);
+    if (e.target.closest("#btnRetryPick")) return advance();
+    if (e.target.closest("#btnWiden")) return openQuiz();
+  });
+  document.addEventListener("keydown", e => {
+    if ($("#view-suggest").hidden || $("#learnView").hidden || e.metaKey || e.ctrlKey || e.altKey || /input|textarea/i.test(e.target.tagName)) return;
+    const k = e.key.toLowerCase();
+    if (stage === "rate"){
+      if (k >= "1" && k <= "5") decide("rate", RATINGS[+k - 1][0]);
+      else if (k === "escape") decide("back");
+    } else if (stage === "want"){
+      if (k === "y") decide("want"); else if (k === "n") decide("nowant"); else if (k === "escape") decide("back");
+    } else if (k === "w") decide("seen");
+    else if (k === "n") decide("unseen");
+  });
+  $("#btnEarly").addEventListener("click", () => showTaste(false));
+
+  // ---------- step 3: your taste and matches ----------
+  function profile(){
+    const f = { g: {}, l: {}, d: {} };
+    const add = (o, k, s) => { (o[k] = o[k] || { sum: 0, n: 0 }); o[k].sum += s; o[k].n++; };
+    Object.values(taste.ratings).forEach(r => {
+      r.g.forEach(g => add(f.g, g, r.s));
+      if (r.l) add(f.l, r.l, r.s);
+      if (decade(r.d)) add(f.d, decade(r.d), r.s);
+    });
+    // shrink toward zero so one rating doesn't decide a whole language or decade
+    const w = (o, k) => o[k] ? o[k].sum / (o[k].n + 2) : 0;
+    const list = (o, label) => Object.keys(o).map(k => ({ k, w: w(o, k), label: label(k) }));
+    const all = [...list(f.g, k => genreMap[k] || k), ...list(f.l, k => langName(k)), ...list(f.d, k => k)];
+    return {
+      g: k => w(f.g, k), l: k => w(f.l, k), d: k => w(f.d, k),
+      loves: all.filter(x => x.w >= .35).sort((a,b) => b.w - a.w).slice(0, 8),
+      hates: all.filter(x => x.w <= -.3).sort((a,b) => a.w - b.w).slice(0, 8),
+      topG: Object.keys(f.g).filter(k => w(f.g, k) > 0).sort((a,b) => w(f.g, b) - w(f.g, a)).slice(0, 2),
+      topL: Object.keys(f.l).filter(k => w(f.l, k) > 0).sort((a,b) => w(f.l, b) - w(f.l, a)).slice(0, 2)
+    };
+  }
+  function predict(P, m){
+    const gs = (m.genre_ids || []).map(g => P.g(g));
+    return (gs.length ? gs.reduce((a,b) => a + b, 0) / Math.sqrt(gs.length) : 0)
+      + 1.2 * P.l(m.original_language) + .6 * P.d(decade(m.release_date))
+      + (m.vote_average ? (m.vote_average - 6.8) * .25 : 0);
+  }
+
+  const cache = new Map();
+  const cached = (key, fn) => { if (!cache.has(key)) cache.set(key, fn().catch(e => { cache.delete(key); throw e; })); return cache.get(key); };
+
+  async function buildMatches(){
+    const P = profile();
+    const ratedList = Object.entries(taste.ratings).map(([id, r]) => ({ id: +id, ...r }));
+    const liked = ratedList.filter(r => r.s > 0).sort((a,b) => b.s - a.s).slice(0, 8);
+    const disliked = ratedList.filter(r => r.s < 0).sort((a,b) => a.s - b.s).slice(0, 3);
+    const pool = new Map();
+    const add = (m, boost, because, secret) => {
+      if (m.id in taste.ratings || taste.skip.includes(m.id) || !m.poster_path) return;
+      const c = pool.get(m.id) || { m, boost: 0, because: null, secret: false };
+      c.boost += boost; c.secret = c.secret || !!secret;
+      if (because && boost > 0 && !c.because) c.because = because;
+      pool.set(m.id, c);
+    };
+    // films similar to the ones you rated, pulled up by loves and pushed down by yucks
+    const recs = await Promise.all([...liked, ...disliked].map(r =>
+      cached("rec" + r.id, () => tmdb(`/movie/${r.id}/recommendations`, { language: "en-US" })).then(d => ({ r, list: d.results || [] })).catch(() => ({ r, list: [] }))));
+    recs.forEach(({ r, list }) => list.forEach(m => add(m, r.s > 0 ? .35 * r.s : .3 * r.s, r.s > 0 ? `Because you ${r.s === 2 ? "loved" : "liked"} ${r.t}` : null)));
+    // highly rated films in your strongest genres and languages
+    const gs = P.topG.length ? P.topG : taste.genres.slice(0, 2), ls = P.topL.length ? P.topL : [null];
+    const disc = await Promise.all(gs.flatMap(g => ls.map(l => {
+      const p = { include_adult: "false", language: "en-US", sort_by: "vote_average.desc", with_genres: g, "vote_count.gte": l && l !== "en" ? 50 : 300 };
+      if (l) p.with_original_language = l;
+      return cached("disc" + JSON.stringify(p), () => tmdb("/discover/movie", p)).then(d => d.results || []).catch(() => []);
+    })));
+    disc.flat().forEach(m => add(m, 0, null));
+    // films you said you haven't seen yet
+    Object.entries(taste.secret).forEach(([id, b]) => add(unbrief(id, b), .1, null, true));
+    return [...pool.values()].map(c => ({ ...c, score: predict(P, c.m) + Math.max(-1.5, Math.min(1.5, c.boost)) }))
+      .sort((a,b) => b.score - a.score).slice(0, 12);
+  }
+
+  async function whereLine(id){
     let IN;
-    try{ IN = ((await tmdb(`/movie/${m.id}/watch/providers`)).results || {})[REGION] || {}; }
-    catch(e){ IN = null; }
-    const box = $("#pickWhere");
-    if (!box || current !== m) return;
-    if (!IN){ box.innerHTML = `<span class="tag">Couldn't check streaming right now.</span>`; return; }
+    try{ IN = ((await cached("wp" + id, () => tmdb(`/movie/${id}/watch/providers`))).results || {})[REGION] || {}; }
+    catch(e){ return ""; }
     const subs = new Set(state.subs);
     const flat = dedupe(IN.flatrate || []), free = dedupe([...(IN.free || []), ...(IN.ads || [])]);
     const mine = flat.filter(p => subs.has(p.name)), names = l => esc(listFmt(l.map(p => p.name)));
-    box.innerHTML = mine.length ? `<span class="tag good">On your apps: ${names(mine)}</span>`
+    return mine.length ? `<span class="tag good">On your apps: ${names(mine)}</span>`
       : free.length ? `<span class="tag good">Free with ads on ${names(free)}</span>`
       : flat.length ? `<span class="tag">Streaming on ${names(flat)}</span>`
       : (IN.rent || IN.buy) ? `<span class="tag">Only to rent or buy in India</span>`
       : `<span class="tag">Not streaming in India right now</span>`;
   }
 
-  function decide(act){
-    const m = current, card = $("#pick");
-    if (!m || !card || card.dataset.busy) return;
-    card.dataset.busy = "1";
-    if (act === "seen"){ seen.add(m.id); store.set("seen", [...seen]); }
-    else {
-      watchlist.unshift({ id: m.id, title: m.title, original_title: m.original_title, date: m.release_date || "", poster: m.poster_path });
-      store.set("watchlist", watchlist); renderWatchlist();
+  let matches = [], tasteSeq = 0;
+  async function showTaste(justFinished){
+    show("suggest");
+    $("#learnView").hidden = true; $("#tasteView").hidden = false; $("#suggestBox").innerHTML = "";
+    const seq = ++tasteSeq, n = rated();
+    await ensureGenres().catch(() => {});
+    const P = genreMap ? profile() : { loves: [], hates: [] };
+    const chips = (l, cls, empty) => l.length ? `<div class="chips">${l.map(x => `<span class="chip static ${cls}">${esc(x.label)}</span>`).join("")}</div>` : `<p class="small">${empty}</p>`;
+    $("#tasteView").innerHTML = `
+      <p class="kicker">For you <button type="button" class="linkbtn" data-go="genres">Change genres</button></p>
+      <h1>${justFinished ? "Got it. Here's your taste." : "Your taste, so far."}</h1>
+      <p class="lede">Based on ${n} film${n === 1 ? "" : "s"} you rated.${n < TARGET ? ` Rate ${TARGET - n} more for sharper picks.` : " Keep rating to sharpen it further."}</p>
+      <div class="taste-cols">
+        <div><h3>You love</h3>${chips(P.loves, "plus", "Nothing stands out yet. Rate a few more you loved.")}</div>
+        <div><h3>Not for you</h3>${chips(P.hates, "minus", "Nothing you dislike so far.")}</div>
+      </div>
+      ${gemSection()}
+      <h2>Your matches</h2>
+      <div id="matches">${spinner("Ranking films for you")}</div>
+      <div class="row" style="margin-top:22px">
+        <button type="button" class="btn" data-go="more">Rate more films</button>
+        <button type="button" class="linkbtn" data-go="reset">Start the survey over</button>
+      </div>`;
+    if (justFinished && state.gkey && !gemBusy && (!taste.gemini || gemDone())) askGemini();
+    try{ matches = await buildMatches(); }
+    catch(err){ if (seq === tasteSeq) $("#matches").innerHTML = errBox(explain(err)); return; }
+    if (seq !== tasteSeq) return;
+    renderMatches(P);
+  }
+
+  function renderMatches(P){
+    if (!matches.length){ $("#matches").innerHTML = `<p class="small">No matches yet. Rate a few films you loved and they'll show up.</p>`; return; }
+    const fits = m => (m.genre_ids || []).filter(g => P.g(g) > .2).map(g => genreMap[g]).slice(0, 2)
+      .concat(P.l(m.original_language) > .2 ? [langName(m.original_language)] : []);
+    $("#matches").innerHTML = `<div class="wl">${matches.map((c, i) => {
+      const m = c.m, pct = Math.max(1, Math.round(50 + 49 * Math.tanh(c.score / 2.5)));
+      const why = c.because || (c.secret ? "On your not-watched list" : fits(m).length ? "Fits your taste for " + listFmt(fits(m)) : "Highly rated in your genres");
+      return `<div class="wl-item match" data-i="${i}">
+        <img src="${IMG}w92${m.poster_path}" alt="" loading="lazy">
+        <div>
+          <div class="n">${esc(m.title)}</div>
+          <div class="tag"><span class="pct">${pct}% match</span> · ${esc([(m.release_date || "").slice(0,4), langName(m.original_language || "")].filter(Boolean).join(" · "))}</div>
+          <div class="why">${esc(why)}</div>
+          <div class="where" data-where="${m.id}"></div>
+        </div>
+        <div class="acts">
+          <button type="button" class="btn alt tiny" data-m="find">Where to watch</button>
+          <button type="button" class="btn alt tiny" data-m="seen">Seen it</button>
+        </div>
+      </div>`;
+    }).join("")}</div>`;
+    matches.forEach(c => whereLine(c.m.id).then(h => { const el = document.querySelector(`[data-where="${c.m.id}"]`); if (el) el.innerHTML = h; }));
+  }
+
+  $("#tasteView").addEventListener("click", e => {
+    const go = e.target.closest("[data-go]");
+    if (go){
+      const g = go.dataset.go;
+      if (g === "survey" || g === "more") return startLearning();
+      if (g === "genres") return openQuiz();
+      if (g === "peek") return showTaste(false);
+      if (g === "reset"){
+        if (!confirm("Clear your ratings and start the survey again?")) return;
+        taste = { genres: [], ratings: {}, secret: {}, skip: [], gemini: null, gHist: [] }; saveTaste();
+        lanes = []; current = null; deck = "learn";
+        return openQuiz();
+      }
+      if (g === "g-ask") return askGemini();
+      if (g === "g-survey") return startGemini();
+      if (g === "g-key"){ $("#btnSettings").click(); return $("#inGemini").focus(); }
+      if (g === "g-find"){
+        const pk = taste.gemini.picks.find(x => x.id === +go.dataset.id);
+        show("search"); candidates = []; $("#optionsWrap").hidden = true; $("#searchMsg").innerHTML = "";
+        return lookup({ ...unbrief(pk.id, pk), kind: "movie" });
+      }
     }
-    card.querySelectorAll("button").forEach(b => b.disabled = true);
-    card.classList.add(act === "seen" ? "out-l" : "out-r");
-    setTimeout(advance, matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 200);
-  }
-
-  $("#suggestBox").addEventListener("click", e => {
-    const a = e.target.closest("[data-act]"); if (a) return decide(a.dataset.act);
-    if (e.target.closest("#btnRetryPick")) return advance();
-    if (e.target.closest("#btnWiden")) return openQuiz();
-  });
-  document.addEventListener("keydown", e => {
-    if ($("#view-suggest").hidden || e.metaKey || e.ctrlKey || e.altKey || /input|textarea/i.test(e.target.tagName)) return;
-    const k = e.key.toLowerCase();
-    if (k === "w") decide("seen"); else if (k === "n") decide("want");
-  });
-
-  function renderWatchlist(){
-    $("#watchlist").innerHTML = `<h2>Your watchlist${watchlist.length ? `<span class="count">${watchlist.length}</span>` : ""}</h2>` +
-      (watchlist.length ? `<div class="wl">${watchlist.map((w,i) => `<div class="wl-item">
-          ${w.poster ? `<img src="${IMG}w92${w.poster}" alt="" loading="lazy">` : `<div class="ph"></div>`}
-          <div><div class="n">${esc(w.title)}</div><div class="tag">${esc((w.date || "").slice(0,4))}</div></div>
-          <button type="button" class="btn alt tiny go" data-find="${i}">Where to watch</button>
-          <button type="button" class="x" data-rm="${i}" aria-label="Remove ${esc(w.title)}">×</button>
-        </div>`).join("")}</div>`
-      : `<p class="small">Films you mark <b>Not watched</b> land here, so you can find them later.</p>`);
-  }
-  $("#watchlist").addEventListener("click", e => {
-    const f = e.target.closest("[data-find]"), r = e.target.closest("[data-rm]");
-    if (r){ watchlist.splice(+r.dataset.rm, 1); store.set("watchlist", watchlist); renderWatchlist(); }
-    if (f){
-      const w = watchlist[+f.dataset.find];
+    const row = e.target.closest(".match"); if (!row) return;
+    const c = matches[+row.dataset.i], m = c.m;
+    const b = e.target.closest("[data-m]"), r = e.target.closest("[data-rate]");
+    if (b && b.dataset.m === "find"){
       show("search"); candidates = []; $("#optionsWrap").hidden = true; $("#searchMsg").innerHTML = "";
-      lookup({ id: w.id, kind: "movie", title: w.title, original_title: w.original_title, release_date: w.date });
+      lookup({ ...m, kind: "movie" });
+    } else if (b && b.dataset.m === "seen"){
+      if (!row.querySelector(".rate-btns")) row.insertAdjacentHTML("beforeend", `<div class="rate-btns">${rateButtons()}</div>`);
+    } else if (r){
+      delete taste.secret[m.id];
+      taste.ratings[m.id] = { ...brief(m), s: +r.dataset.rate }; saveTaste();
+      showTaste(false);
     }
   });
 
+  // landing page for For you: the survey button lives here
   function openSuggest(){
-    if (!prefs) return openQuiz();
-    show("suggest"); renderWatchlist();
-    if (!current) startSuggestions();
+    if (rated() >= TARGET) return showTaste(false);
+    show("suggest");
+    $("#learnView").hidden = true; $("#tasteView").hidden = false;
+    const n = rated();
+    $("#tasteView").innerHTML = `
+      <p class="kicker">For you</p>
+      <h1>What do you like watching?</h1>
+      <p class="lede">Take a quick survey. Pick your genres, then go through well-known films and say whether you've seen each one and how it was.
+        After ${TARGET} ratings you get your taste profile, ranked matches${state.gkey ? " and 10 picks from Gemini" : ""}.</p>
+      ${n ? `<div class="progress"><div class="bar"><i style="width:${n / TARGET * 100}%"></i></div><span>${n} of ${TARGET} rated</span></div>` : ""}
+      <div class="row">
+        <button type="button" class="btn" data-go="survey">${n ? "Continue the survey" : "Take the survey"}</button>
+        ${n >= EARLY ? `<button type="button" class="btn alt" data-go="peek">Peek at my matches</button>` : ""}
+        ${n || taste.genres.length ? `<button type="button" class="linkbtn" data-go="reset">Start over</button>` : ""}
+      </div>`;
+  }
+
+  // ---------- Gemini picks ----------
+  const GEMINI_MODELS = ["gemini-3.8-flash", "gemini-3.5-flash"];
+  const RATING_NAME = Object.fromEntries(RATINGS.map(([v, l]) => [v, l]));
+  let gemBusy = false, gemErr = null;
+  const gemDone = () => taste.gemini.picks.every(p => p.id in taste.gemini.answers);
+
+  async function gemini(system, user, schema){
+    let lastErr = new Error("GMODEL");
+    for (const model of GEMINI_MODELS){
+      for (const withSchema of [true, false]){
+        const body = { systemInstruction: { parts: [{ text: system }] }, contents: [{ role: "user", parts: [{ text: user }] }],
+          generationConfig: { responseMimeType: "application/json", ...(withSchema ? { responseSchema: schema } : {}) } };
+        let r;
+        try{ r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
+          { method: "POST", headers: { "content-type": "application/json", "x-goog-api-key": state.gkey }, body: JSON.stringify(body) }); }
+        catch(e){ throw new Error("GNETWORK"); }
+        const d = await r.json().catch(() => ({}));
+        if (r.ok){
+          const text = ((d.candidates && d.candidates[0] && d.candidates[0].content && d.candidates[0].content.parts) || []).map(x => x.text || "").join("");
+          return JSON.parse(text.replace(/^\s*```(?:json)?|```\s*$/g, ""));
+        }
+        const err = d.error || {}, info = (err.message || "") + JSON.stringify(err.details || "");
+        if (/API_KEY_INVALID|API key not valid/i.test(info) || r.status === 401 || r.status === 403) throw new Error("GKEY");
+        if (r.status === 429) throw new Error("GQUOTA");
+        if (r.status === 404){ lastErr = new Error("GMODEL"); break; }      // try the next model
+        if (r.status === 400 && withSchema){ lastErr = new Error("G " + (err.message || 400)); continue; } // retry without the schema
+        throw new Error("G " + (err.message || r.status));
+      }
+    }
+    throw lastErr;
+  }
+  function explainGemini(e){
+    if (e.message === "GKEY") return "Gemini rejected the API key. Check it in Settings.";
+    if (e.message === "GQUOTA") return "Gemini's rate limit or free quota is used up. Wait a minute and try again.";
+    if (e.message === "GNETWORK") return "Couldn't reach Gemini. Check your connection and try again.";
+    if (e.message === "GMODEL") return "None of the Gemini models this app uses are available to your key.";
+    if (e instanceof SyntaxError) return "Gemini's reply wasn't in the expected format. Try again.";
+    if (["KEY","NETWORK"].includes(e.message) || /^HTTP/.test(e.message)) return explain(e);
+    return "Gemini returned an error: " + esc(e.message.replace(/^G /, ""));
+  }
+
+  function geminiPrompt(){
+    const line = b => `${b.t}${b.d ? ` (${b.d.slice(0,4)})` : ""}${b.l ? " · " + langName(b.l) : ""}${b.g && b.g.length ? " · " + [...new Set(b.g.map(g => genreMap[g]).filter(Boolean))].join(", ") : ""}`;
+    const watched = Object.values(taste.ratings).sort((a,b) => b.s - a.s).map(r => `- ${line(r)} · ${RATING_NAME[r.s]}`);
+    const unseen = Object.values(taste.secret).slice(0, 80).map(b => `- ${line(b)}`);
+    const hist = taste.gHist || [];
+    const wants = hist.filter(h => h.a === "want").map(h => `- ${h.t}`), nos = hist.filter(h => h.a === "nowant").map(h => `- ${h.t}`);
+    const system = "You are a film critic and recommender with deep knowledge of world cinema, including Indian films in every language: Hindi, Tamil, Telugu, Malayalam, Kannada, Bengali, Marathi and more. You recommend only real, released feature films and never invent titles.";
+    const user = `Recommend exactly 10 feature films for this viewer, based entirely on the evidence below. They live in India.
+
+Genres they chose: ${taste.genres.map(g => genreMap[g]).join(", ")}
+
+Films they have watched, with their own rating (Great > Good > Okay > Meh > Yuck):
+${watched.join("\n")}
+${unseen.length ? `\nFilms they haven't watched yet. These say nothing about taste, but don't recommend them:\n${unseen.join("\n")}\n` : ""}${wants.length ? `\nEarlier recommendations they want to watch (a positive signal; don't repeat them):\n${wants.join("\n")}\n` : ""}${nos.length ? `\nEarlier recommendations they said they don't want to watch (a negative signal; don't repeat them):\n${nos.join("\n")}\n` : ""}
+How to choose:
+1. Work out what the Great and Good films have in common: genre, tone, language, era, pace, directors, writers, actors and themes. Lean on those patterns.
+2. Steer away from whatever the Meh and Yuck films have in common.
+3. Treat language and era as real signals, but include a film outside them when the evidence strongly says they'd love it.
+4. Don't recommend any film listed above, in any section.
+5. Mix well-known titles with a few lesser-known ones they may have missed.
+6. Order the list from the film they're most likely to love to the least likely.
+
+For each film give: title (the English title as listed on TMDB), original_title, year (original release year), language, and reason: one sentence naming one or two of their rated films and what connects them.`;
+    const schema = { type: "OBJECT", required: ["picks"], properties: { picks: { type: "ARRAY", items: { type: "OBJECT", required: ["title", "year", "reason"],
+      properties: { title: { type: "STRING" }, original_title: { type: "STRING" }, year: { type: "INTEGER" }, language: { type: "STRING" }, reason: { type: "STRING" } } } } } };
+    return { system, user, schema };
+  }
+
+  // match Gemini's titles to TMDB so each pick has a poster, plot and streaming info
+  async function resolvePick(p){
+    const year = p.year ? String(p.year) : "";
+    const tries = [{ query: p.title, primary_release_year: year }, { query: p.original_title, primary_release_year: year }, { query: p.title }];
+    for (const t of tries){
+      if (!t.query) continue;
+      if (!t.primary_release_year) delete t.primary_release_year;
+      const d = await tmdb("/search/movie", { ...t, include_adult: "false", language: "en-US" });
+      const hit = (d.results || []).find(m => yearOk((m.release_date || "").slice(0,4), year));
+      if (hit) return hit;
+    }
+    return null;
+  }
+
+  async function askGemini(){
+    if (!state.gkey || gemBusy) return;
+    gemBusy = true; gemErr = null; refreshGem();
+    try{
+      await ensureGenres();
+      const { system, user, schema } = geminiPrompt();
+      const out = await gemini(system, user, schema);
+      const raw = (out.picks || []).slice(0, 10);
+      const hits = await Promise.all(raw.map(p => resolvePick(p).catch(() => null)));
+      const seenIds = new Set(), picks = [];
+      hits.forEach((m, i) => {
+        if (!m || seenIds.has(m.id) || m.id in taste.ratings) return;
+        seenIds.add(m.id);
+        picks.push({ id: m.id, ...brief(m), o: m.overview || "", why: raw[i].reason || "", rank: picks.length + 1 });
+      });
+      if (!picks.length) throw new Error("G none of Gemini's picks could be found on TMDB. Try again.");
+      if (taste.gemini){
+        // remember earlier answers so the next request can learn from them
+        taste.gHist = (taste.gHist || []).concat(taste.gemini.picks.map(p => {
+          const a = taste.gemini.answers[p.id];
+          return { id: p.id, t: p.t, a: !a ? "skipped" : a.seen ? "seen" : a.want ? "want" : "nowant" };
+        }));
+      }
+      taste.gemini = { at: Date.now(), picks, answers: {} };
+      saveTaste();
+    }catch(e){ gemErr = e; }
+    finally{ gemBusy = false; refreshGem(); }
+  }
+  function refreshGem(){ const el = $("#gem"); if (el) el.outerHTML = gemSection(); }
+
+  function gemSection(){
+    const head = `<h2>AI picks <span class="ai">Gemini</span></h2>`;
+    if (!state.gkey) return `<div class="gem" id="gem">${head}<p class="small">Add a Gemini API key in Settings and Gemini will pick 10 films from your ratings.</p>
+      <button type="button" class="btn alt tiny" data-go="g-key">Add Gemini key</button></div>`;
+    if (gemBusy) return `<div class="gem" id="gem">${head}${spinner("Gemini is studying your ratings")}</div>`;
+    const g = taste.gemini, err = gemErr ? errBox(explainGemini(gemErr)) : "";
+    if (!g) return `<div class="gem" id="gem">${head}${err}<p class="small">Gemini reads every rating and picks 10 films, best match first.</p>
+      <button type="button" class="btn" data-go="g-ask">Ask Gemini for 10 picks</button></div>`;
+    const ans = g.answers, done = g.picks.filter(p => p.id in ans).length;
+    if (done < g.picks.length) return `<div class="gem" id="gem">${head}${err}<p class="small">Gemini picked ${g.picks.length} films for you. Go through them one by one, like the survey.</p>
+      <button type="button" class="btn" data-go="g-survey">${done ? `Continue Gemini's picks · ${done} of ${g.picks.length}` : "See Gemini's picks"}</button></div>`;
+    const wants = g.picks.filter(p => ans[p.id].want), seen = g.picks.filter(p => ans[p.id].seen), nos = g.picks.filter(p => !ans[p.id].seen && !ans[p.id].want);
+    const liked = seen.filter(p => ans[p.id].s > 0).length;
+    const row = p => `<div class="wl-item match">
+        ${p.p ? `<img src="${IMG}w92${p.p}" alt="" loading="lazy">` : `<div class="ph"></div>`}
+        <div><div class="n">${esc(p.t)}</div><div class="tag">#${p.rank} · ${esc([(p.d || "").slice(0,4), p.l ? langName(p.l) : ""].filter(Boolean).join(" · "))}</div>
+          <div class="why">${esc(p.why)}</div><div class="where" data-gwhere="${p.id}"></div></div>
+        <div class="acts"><button type="button" class="btn alt tiny" data-go="g-find" data-id="${p.id}">Where to watch</button></div>
+      </div>`;
+    setTimeout(() => wants.forEach(p => whereLine(p.id).then(h => { const el = document.querySelector(`[data-gwhere="${p.id}"]`); if (el) el.innerHTML = h; })));
+    return `<div class="gem" id="gem">${head}${err}
+      <p class="score">Want to watch ${wants.length} · Already seen ${seen.length}${seen.length ? ` (liked ${liked})` : ""} · Not for you ${nos.length}</p>
+      ${wants.length ? `<div class="wl">${wants.map(row).join("")}</div>` : `<p class="small">None of these grabbed you. Ask again and Gemini will learn from that.</p>`}
+      ${seen.length ? `<p class="small" style="margin-top:12px">Already seen: ${seen.map(p => `${esc(p.t)} (${RATING_NAME[ans[p.id].s]})`).join(", ")}</p>` : ""}
+      <div class="row" style="margin-top:14px"><button type="button" class="btn alt tiny" data-go="g-ask">Ask Gemini for 10 more</button></div></div>`;
+  }
+
+  function startGemini(){
+    deck = "gemini"; current = null;
+    show("suggest");
+    $("#learnView").hidden = false; $("#tasteView").hidden = true;
+    $("#learnKicker").textContent = "Gemini's picks"; $("#btnEditTaste").hidden = true;
+    renderProgress(); advance();
   }
   $("#tabs").addEventListener("click", e => {
     const b = e.target.closest("[data-go]"); if (!b) return;
