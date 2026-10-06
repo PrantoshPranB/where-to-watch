@@ -141,6 +141,8 @@ input::placeholder{color:var(--muted);opacity:.8}
 details{border:2px dashed var(--hair);border-radius:4px;padding:12px 14px}
 summary{cursor:pointer;font:600 12px/1.4 var(--mono);letter-spacing:.1em;text-transform:uppercase}
 /* section tabs */
+a.brand{color:inherit;text-decoration:none}
+.backlink{margin-bottom:14px}
 .tabs{display:flex;margin:-22px 0 34px;border:2px solid var(--line);border-radius:4px;background:var(--paper);padding:3px;gap:3px;width:max-content;max-width:100%}
 .tabs button{appearance:none;border:0;background:none;cursor:pointer;padding:9px 16px;border-radius:2px;font:600 12px/1 var(--mono);letter-spacing:.14em;text-transform:uppercase}
 .tabs button[aria-current="page"]{background:var(--red);color:var(--on-red)}
@@ -229,10 +231,17 @@ kbd{font:inherit;border:1.5px solid var(--hair);border-radius:3px;padding:2px 5p
 .sync-card .who{font:400 28px/1.1 var(--display);margin:6px 0}
 
 /* match details */
-.match{flex-wrap:wrap}
-.match .n.click{cursor:pointer}
-.match .n.click:hover{color:var(--red)}
+.match,#watchBody .wl-item{flex-wrap:wrap}
+.wl-item .n.click{cursor:pointer}
+.wl-item .n.click:hover{color:var(--red)}
+#watchBody .acts{margin-left:auto;display:flex;gap:8px;flex:none;align-items:center}
 .mdetail{flex-basis:100%;margin:12px 0 4px 54px;padding:14px 16px;background:var(--soft);border-left:3px solid var(--gold);font-size:15px}
+.mdetail.has-poster{display:flex;gap:20px;align-items:flex-start}
+.mdetail.has-poster > div{flex:1;min-width:0}
+.wl-item .mdetail img.bigposter{display:block;width:100%;height:auto;aspect-ratio:2/3;object-fit:cover;border-radius:4px;background:var(--paper);box-shadow:4px 4px 0 var(--ink)}
+.mdetail .bigposter-link{display:block;position:relative;flex:0 0 180px}
+.mdetail .bigposter-link::after{content:"Full size ↗";position:absolute;left:8px;bottom:8px;font:600 10px/1 var(--mono);letter-spacing:.12em;text-transform:uppercase;background:rgba(23,17,12,.75);color:#F3E9D8;padding:4px 6px;border-radius:2px;opacity:0;transition:opacity .15s}
+.mdetail .bigposter-link:hover::after,.mdetail .bigposter-link:focus-visible::after{opacity:1}
 .mdetail .facts{font:600 12px/1.5 var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
 .mdetail p{margin:0 0 10px}
 .mdetail .people{margin-bottom:10px}
@@ -263,6 +272,11 @@ footer{margin-top:56px;padding-top:16px;border-top:2px solid var(--ink);font:500
 .spin{display:inline-block;width:18px;height:18px;border:3px solid var(--hair);border-top-color:var(--red);border-radius:50%;animation:s .8s linear infinite;vertical-align:-3px;margin-right:10px}
 @keyframes s{to{transform:rotate(360deg)}}
 @media (prefers-reduced-motion: reduce){.spin{animation-duration:3s}.ticker .track,.pick,.pick.out-l,.pick.out-r{animation:none}*{transition:none !important}}
+@media (max-width:600px){
+  .mdetail{margin-left:0}
+  .mdetail.has-poster{flex-direction:column}
+  .mdetail .bigposter-link{flex:none;width:100%;max-width:240px}
+}
 @media (max-width:480px){
   .searchbar{flex-direction:column}
   .opt{grid-template-columns:24px 52px 1fr;gap:12px}
@@ -275,6 +289,7 @@ footer{margin-top:56px;padding-top:16px;border-top:2px solid var(--ink);font:500
   .pick-title{font-size:26px}
   .wl-item{flex-wrap:wrap}.wl-item .go,.match .acts,.wl-item .acts{margin-left:54px}
   .mdetail{margin-left:0}
+
   .taste-cols{grid-template-columns:1fr}
   .rate-btns{gap:5px}.rbtn{font-size:10px;letter-spacing:.02em}
 }
@@ -284,7 +299,7 @@ footer{margin-top:56px;padding-top:16px;border-top:2px solid var(--ink);font:500
 <div class="ticker" aria-hidden="true"><div class="track" id="ticker"></div></div>
 <div class="wrap">
   <header class="top">
-    <div class="brand"><span class="brand-name">Where to watch</span> <span class="flag">India</span></div>
+    <a class="brand" href="#" id="brandHome" aria-label="Where to watch, home"><span class="brand-name">Where to watch</span> <span class="flag">India</span></a>
     <div class="hello" id="hello" hidden>
       <span id="helloName"></span>
       <button class="btn alt tiny syncbtn" id="btnSync" type="button"><span class="dot" id="syncDot"></span><span id="syncLabel">Sync</span></button>
@@ -299,9 +314,9 @@ footer{margin-top:56px;padding-top:16px;border-top:2px solid var(--ink);font:500
 
   <!-- Step 1: about you -->
   <section id="view-setup" hidden>
-    <p class="kicker">Step 1 of 2 · Box office</p>
-    <h1>Let's get you a pass.</h1>
-    <p class="lede">Takes a minute, and it's saved in this browser. Searches go to TMDB, plus Internet Archive and Wikimedia Commons to look for free legal copies.</p>
+    <p class="kicker" id="setupKicker">Step 1 of 2 · Box office</p>
+    <h1 id="setupTitle">Let's get you a pass.</h1>
+    <p class="lede" id="setupLede">Takes a minute, and it's saved in this browser. Searches go to TMDB, plus Internet Archive and Wikimedia Commons to look for free legal copies.</p>
     <div class="msg" id="syncHint">Have the passphrase? <button type="button" class="linkbtn" id="btnSyncFromSetup">Log in</button> with your name instead. The keys fill in for you, and your settings follow you between devices.</div>
     <form id="setupForm">
       <label class="field"><span>Your name</span>
@@ -317,13 +332,17 @@ footer{margin-top:56px;padding-top:16px;border-top:2px solid var(--ink);font:500
       <p class="small">Get one at <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com/apikey</a>. When you ask for AI picks, your genres, ratings and not-watched films are sent to Google's Gemini.</p>
       <p class="small" id="gUsage"></p>
       <div id="setupMsg"></div>
-      <button class="btn" type="submit" id="btnSetup">Continue</button>
+      <div class="row">
+        <button class="btn" type="submit" id="btnSetup">Continue</button>
+        <button type="button" class="btn alt" id="btnEditApps" hidden>Change my apps</button>
+        <button type="button" class="linkbtn" data-back hidden>Back</button>
+      </div>
     </form>
   </section>
 
   <!-- Step 2: streaming apps -->
   <section id="view-apps" hidden>
-    <p class="kicker">Step 2 of 2 · Your screens</p>
+    <p class="kicker" id="appsKicker">Step 2 of 2 · Your screens</p>
     <h1>Which apps do you pay for?</h1>
     <p class="lede">Pick every subscription you have. The list comes live from what's available in India, and results on your apps show first.</p>
     <input type="search" id="appFilter" placeholder="Filter apps">
@@ -331,6 +350,7 @@ footer{margin-top:56px;padding-top:16px;border-top:2px solid var(--ink);font:500
     <div class="sticky row">
       <button class="btn" id="btnSaveApps">Save apps</button>
       <span class="small" id="appCount"></span>
+      <button type="button" class="linkbtn" data-back hidden>Back</button>
     </div>
   </section>
 
@@ -381,6 +401,7 @@ footer{margin-top:56px;padding-top:16px;border-top:2px solid var(--ink);font:500
       <div class="sticky row">
         <button class="btn" type="submit" id="btnQuiz">Start rating</button>
         <span class="small" id="quizCount"></span>
+        <button type="button" class="linkbtn" data-back hidden>Cancel</button>
       </div>
     </form>
   </section>
@@ -683,7 +704,7 @@ footer{margin-top:56px;padding-top:16px;border-top:2px solid var(--ink);font:500
 
   document.addEventListener("click", async e => {
     const b = e.target.closest("[data-s]"); if (!b || $("#view-sync").hidden) return;
-    if (b.dataset.s === "back") return routeHome();
+    if (b.dataset.s === "back") return goBack();
     if (b.dataset.s === "setup") return show("setup");
     if (b.dataset.s === "now"){ if (await syncNow()) refreshFromStore(); return; }
     if (b.dataset.s === "logout"){
@@ -737,12 +758,21 @@ footer{margin-top:56px;padding-top:16px;border-top:2px solid var(--ink);font:500
     const once = [...items, "Free & legal classics"].map(t => `<span>${esc(t)}</span><span class="star">✦</span>`).join("");
     $("#ticker").innerHTML = once.repeat(4);
   }
+  // Every screen change is recorded in the browser's history, so Back (including a phone's back
+  // gesture) steps through screens instead of leaving the site.
+  let curView = null, navDepth = 0, restoring = false;
   function show(v){
     setTicker();
     ["setup","apps","search","quiz","suggest","sync","watch"].forEach(x => $("#view-"+x).hidden = x !== v);
+    if (!restoring && v !== curView){
+      if (curView === null) history.replaceState({ v, i: 0 }, "");
+      else history.pushState({ v, i: ++navDepth }, "");
+    }
+    curView = v;
     const ready = state.key && state.subs.length;
-    const main = ["search","quiz","suggest","watch"].includes(v);
-    $("#hello").hidden = $("#tabs").hidden = !ready || !main;
+    $("#hello").hidden = $("#tabs").hidden = !ready;
+    // Back links show only when there's somewhere to go back to
+    document.querySelectorAll(`#view-${v} [data-back]`).forEach(b => b.hidden = !(ready && navDepth > 0) && !(v === "quiz" && taste.genres.length));
     document.querySelectorAll("#tabs button").forEach(b => {
       if (b.dataset.go === (v === "quiz" ? "suggest" : v)) b.setAttribute("aria-current", "page"); else b.removeAttribute("aria-current");
     });
@@ -750,6 +780,26 @@ footer{margin-top:56px;padding-top:16px;border-top:2px solid var(--ink);font:500
     $("#searchHeading").textContent = state.name ? `What do you want to watch, ${state.name}?` : "What do you want to watch?";
     window.scrollTo(0,0);
   }
+
+  function goBack(){ if (navDepth > 0) history.back(); else routeHome(); }
+  window.addEventListener("popstate", e => {
+    const v = e.state && e.state.v; if (!v) return;
+    navDepth = e.state.i || 0; // each entry knows its position, so Back and Forward both stay in step
+    restoring = true;
+    try{ go(v); } finally { restoring = false; }
+  });
+  // open a screen by name, refreshing whatever it shows
+  function go(v){
+    if (v === "suggest") return openSuggest();
+    if (v === "watch") return openWatch();
+    if (v === "quiz") return openQuiz();
+    if (v === "sync") return openSync();
+    if (v === "setup") return state.key ? openSettings() : show("setup");
+    if (v === "apps") return openApps();
+    show("search");
+  }
+  document.addEventListener("click", e => { if (e.target.closest("[data-back]")){ e.preventDefault(); goBack(); } });
+  $("#brandHome").addEventListener("click", e => { e.preventDefault(); if (state.key && state.subs.length){ show("search"); $("#inQuery").focus(); } });
 
   // ---------- step 1 ----------
   $("#setupForm").addEventListener("submit", async e => {
@@ -759,9 +809,10 @@ footer{margin-top:56px;padding-top:16px;border-top:2px solid var(--ink);font:500
     $("#setupMsg").innerHTML = spinner("Checking your key");
     try{
       await tmdb("/authentication", {}, key);
+      const editing = state.key && state.subs.length;
       state.key = key; state.name = name; state.gkey = gkey; store.set("name", name); store.set("key", key); store.set("gkey", gkey);
       $("#setupMsg").innerHTML = "";
-      await openApps();
+      if (editing) goBack(); else await openApps(); // first-time setup carries on to picking apps
     }catch(err){
       $("#setupMsg").innerHTML = errBox(explain(err));
     }finally{ $("#btnSetup").disabled = false; }
@@ -771,6 +822,7 @@ footer{margin-top:56px;padding-top:16px;border-top:2px solid var(--ink);font:500
   let providers = [], picked = new Set();
   async function openApps(){
     show("apps");
+    $("#appsKicker").textContent = state.subs.length ? "Settings · Your apps" : "Step 2 of 2 · Your screens";
     picked = new Set(state.subs);
     $("#appGrid").innerHTML = spinner("Loading streaming apps available in India");
     try{
@@ -809,17 +861,29 @@ footer{margin-top:56px;padding-top:16px;border-top:2px solid var(--ink);font:500
   });
   $("#appFilter").addEventListener("input", renderApps);
   $("#btnSaveApps").addEventListener("click", () => {
+    const editing = state.subs.length > 0;
     state.subs = [...picked]; store.set("subs", state.subs);
+    if (editing) return goBack();
     show("search"); $("#inQuery").focus();
   });
 
-  $("#btnSettings").addEventListener("click", () => {
+  $("#btnSettings").addEventListener("click", openSettings);
+  $("#btnEditApps").addEventListener("click", openApps);
+  function openSettings(){
+    const editing = !!(state.key && state.subs.length);
+    $("#setupKicker").textContent = editing ? "Settings" : "Step 1 of 2 · Box office";
+    $("#setupTitle").textContent = editing ? "Your settings." : "Let's get you a pass.";
+    $("#setupLede").hidden = editing;
+    $("#btnSetup").textContent = editing ? "Save" : "Continue";
+    $("#btnEditApps").hidden = !editing;
+    $("#syncHint").hidden = editing || !!syncCfg;
+    $("#setupMsg").innerHTML = "";
     $("#inName").value = state.name; $("#inKey").value = state.key; $("#inGemini").value = state.gkey;
     const u = store.get("gusage", {}), dead = deadModels();
     $("#gUsage").textContent = (u.day === new Date().toDateString() ? `Gemini requests from this browser today: ${u.n} (${Object.entries(u.models).map(([m, n]) => `${m.replace("gemini-", "")}: ${n}`).join(", ")}).` : "No Gemini requests from this browser today.")
       + (Object.keys(dead).length ? ` Daily limit reached on ${Object.keys(dead).map(m => m.replace("gemini-", "")).join(", ")}, until about ${new Date(Math.min(...Object.values(dead))).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}.` : "");
     show("setup");
-  });
+  }
 
   // ---------- step 3: find the right movie or show ----------
   let candidates = [];
@@ -834,6 +898,7 @@ footer{margin-top:56px;padding-top:16px;border-top:2px solid var(--ink);font:500
     e.preventDefault();
     const q = $("#inQuery").value.trim(); if (!q) return;
     const kind = kindNow();
+    ticketFrom = null;
     $("#result").innerHTML = ""; $("#optionsWrap").hidden = true;
     $("#searchMsg").innerHTML = spinner("Searching");
     try{
@@ -898,6 +963,13 @@ footer{margin-top:56px;padding-top:16px;border-top:2px solid var(--ink);font:500
   }
 
   let lookupSeq = 0;
+  let ticketFrom = null; // the screen a ticket was opened from, for its Back button
+  const VIEW_NAMES = { suggest: "For you", watch: "Watchlist" };
+  function openTicket(m){
+    ticketFrom = VIEW_NAMES[curView] ? curView : null;
+    show("search"); candidates = []; $("#optionsWrap").hidden = true; $("#searchMsg").innerHTML = "";
+    lookup(m);
+  }
   async function lookup(m){
     const seq = ++lookupSeq;
     $("#optionsWrap").hidden = true;
@@ -1171,7 +1243,7 @@ Give at most 10 links, best first, and link to the page where the video actually
     body += `<div class="row" style="margin-top:18px">
       ${IN.link ? `<a class="btn tiny" href="${esc(IN.link)}" target="_blank" rel="noopener">Open watch links</a>` : ""}
       ${wlButton(m, "btnWlTicket")}
-      <button class="btn alt tiny" id="btnBack">Pick a different ${noun(m.kind)}</button>
+      ${ticketFrom ? `<button class="btn alt tiny" data-back>← Back to ${VIEW_NAMES[ticketFrom]}</button>` : candidates.length ? `<button class="btn alt tiny" id="btnBack">Pick a different ${noun(m.kind)}</button>` : ""}
     </div>
     <p class="small" style="margin-top:12px">"Open watch links" goes to the India listing with direct links into each app. Check the price in the app before paying for anything.</p>`;
 
@@ -1183,6 +1255,7 @@ Give at most 10 links, best first, and link to the page where the video actually
     </article>`;
     const back = $("#btnBack");
     if (back) back.addEventListener("click", () => { $("#result").innerHTML = ""; $("#optionsWrap").hidden = !candidates.length; $("#inQuery").focus(); });
+    if (ticketFrom) $("#result").insertAdjacentHTML("afterbegin", `<button type="button" class="linkbtn backlink" data-back>← Back to ${VIEW_NAMES[ticketFrom]}</button>`);
     $("#btnWlTicket").addEventListener("click", e => wlToggle(m, e.currentTarget));
     return !mine.length && !free.length;
   }
@@ -1242,7 +1315,7 @@ Give at most 10 links, best first, and link to the page where the video actually
     lanes = []; current = null;
     startLearning();
   });
-  $("#btnEditTaste").addEventListener("click", openQuiz);
+  $("#btnEditTaste").addEventListener("click", () => deck === "gemini" ? showTaste(false) : openQuiz());
 
   // ---------- step 2: rate what you've seen ----------
   // One lane per genre for Indian films and one for everything else, most-voted first,
@@ -1285,7 +1358,7 @@ Give at most 10 links, best first, and link to the page where the video actually
     if (deck !== "learn"){ deck = "learn"; current = null; }
     show("suggest");
     $("#learnView").hidden = false; $("#tasteView").hidden = true;
-    $("#learnKicker").textContent = "Taste test · step 2"; $("#btnEditTaste").hidden = false;
+    $("#learnKicker").textContent = "Taste test · step 2"; $("#btnEditTaste").hidden = false; $("#btnEditTaste").textContent = "Change genres";
     if (!lanes.length || !current) buildLanes();
     renderProgress();
     current ? renderPick(current) : advance();
@@ -1578,8 +1651,7 @@ Give at most 10 links, best first, and link to the page where the video actually
       if (g === "g-key"){ $("#btnSettings").click(); return $("#inGemini").focus(); }
       if (g === "g-find"){
         const pk = taste.gemini.picks.find(x => x.id === +go.dataset.id);
-        show("search"); candidates = []; $("#optionsWrap").hidden = true; $("#searchMsg").innerHTML = "";
-        return lookup({ ...unbrief(pk.id, pk), kind: "movie" });
+        return openTicket({ ...unbrief(pk.id, pk), kind: "movie" });
       }
     }
     const wb = e.target.closest("[data-wl]");
@@ -1593,8 +1665,7 @@ Give at most 10 links, best first, and link to the page where the video actually
     const b = e.target.closest("[data-m]"), r = e.target.closest("[data-rate]");
     if (b && b.dataset.m === "more") return toggleDetail(row, c);
     if (b && b.dataset.m === "find"){
-      show("search"); candidates = []; $("#optionsWrap").hidden = true; $("#searchMsg").innerHTML = "";
-      lookup({ ...m, kind: "movie" });
+      openTicket({ ...m, kind: "movie" });
     } else if (b && b.dataset.m === "seen"){
       if (!row.querySelector(".rate-btns")) row.insertAdjacentHTML("beforeend", `<div class="rate-btns">${rateButtons()}</div>`);
     } else if (r){
@@ -1642,6 +1713,7 @@ Give at most 10 links, best first, and link to the page where the video actually
   }
 
   let wlFilter = "all", wlRating = null;
+  const wlOpen = new Set();
   async function openWatch(){
     show("watch");
     wlRating = null;
@@ -1687,17 +1759,28 @@ Give at most 10 links, best first, and link to the page where the video actually
         ${list.length ? `<div class="wl">${list.map(([k, it]) => `<div class="wl-item" data-k="${esc(k)}">
             ${it.p ? `<img src="${IMG}w92${it.p}" alt="" loading="lazy">` : `<div class="ph"></div>`}
             <div class="${readyNow(it) ? "ready" : ""}">
-              <div class="n">${esc(it.t)}</div>
+              <div class="n click" data-w="more">${esc(it.t)}</div>
               <div class="tag">${esc([(it.d || "").slice(0,4), it.l ? langName(it.l) : "", it.kind === "tv" ? "Series" : "Film"].filter(Boolean).join(" · "))}</div>
               <div class="where">${line(it)}</div>
             </div>
             <div class="acts">
+              <button type="button" class="btn alt tiny" data-w="more" aria-expanded="${wlOpen.has(k)}">Details</button>
               <button type="button" class="btn alt tiny" data-w="find">Where to watch</button>
               <button type="button" class="btn alt tiny" data-w="seen">Watched it</button>
               <button type="button" class="x" data-w="rm" aria-label="Remove ${esc(it.t)}">×</button>
             </div>
             ${wlRating === k ? `<div class="rate-btns" style="flex-basis:100%;margin-top:10px">${rateButtons()}</div>` : ""}
+            ${wlOpen.has(k) ? `<div class="mdetail"></div>` : ""}
           </div>`).join("")}</div>` : `<p class="small">Nothing here matches that filter.</p>`}`;
+    // details stay open while the list refreshes; TMDB answers come from the cache after the first load
+    document.querySelectorAll("#watchBody [data-k] .mdetail").forEach(async box => {
+      const it = wl.items[box.closest("[data-k]").dataset.k]; if (!it) return;
+      const film = it.kind === "movie";
+      if (film && rated()) await ensureGenres().catch(() => {});
+      fillDetail(box, { id: it.id, kind: it.kind, title: it.t, poster: it.p }, {
+        where: film, whyTitle: "Why it suits you",
+        why: film && rated() && genreMap ? d => whyMatched({ m: { id: it.id, genre_ids: it.g && it.g.length ? it.g : (d.genres || []).map(g => g.id), original_language: it.l, release_date: it.d } }, d) : null });
+    });
   }
 
   $("#watchBody").addEventListener("click", e => {
@@ -1710,44 +1793,68 @@ Give at most 10 links, best first, and link to the page where the video actually
       wlRating = null; wlRemove(k); return renderWatch(false);
     }
     if (!b) return;
+    if (b.dataset.w === "more"){ wlOpen.has(k) ? wlOpen.delete(k) : wlOpen.add(k); return renderWatch(false); }
     if (b.dataset.w === "rm"){ wlRemove(k); return renderWatch(false); }
     if (b.dataset.w === "seen"){
       if (it.kind !== "movie"){ wlRemove(k); return renderWatch(false); } // TV shows aren't part of the film taste profile
       wlRating = wlRating === k ? null : k; return renderWatch(false);
     }
     if (b.dataset.w === "find"){
-      show("search"); candidates = []; $("#optionsWrap").hidden = true; $("#searchMsg").innerHTML = "";
-      lookup({ ...unbrief(it.id, it), kind: it.kind, title: it.t });
+      openTicket({ ...unbrief(it.id, it), kind: it.kind, title: it.t });
     }
   });
 
   // ---------- match details ----------
-  async function toggleDetail(row, c){
-    const open = row.querySelector(".mdetail");
-    row.querySelectorAll('[data-m="more"]').forEach(b => b.setAttribute("aria-expanded", !open));
-    if (open){ open.remove(); return; }
-    row.insertAdjacentHTML("beforeend", `<div class="mdetail">${spinner("Loading details")}</div>`);
-    const box = row.querySelector(".mdetail"), m = c.m;
+  // One details panel for films and shows, used by matches and the watchlist.
+  // it: { id, kind, title, poster }; opts.why(d) adds "Why it matched", opts.where adds streaming, opts.findAttr adds a ticket button.
+  async function fillDetail(box, it, opts = {}){
+    box.innerHTML = spinner("Loading details");
+    const tv = it.kind === "tv";
     let d;
-    try{ d = await cached("det" + m.id, () => tmdb(`/movie/${m.id}`, { append_to_response: "credits,videos,release_dates", language: "en-US" })); }
+    try{ d = await cached(`det:${it.kind}:${it.id}`, () => tmdb(`/${it.kind}/${it.id}`,
+      { append_to_response: tv ? "credits,videos,content_ratings" : "credits,videos,release_dates", language: "en-US" })); }
     catch(err){ box.innerHTML = errBox(explain(err)); return; }
-    const inRel = ((d.release_dates && d.release_dates.results) || []).find(x => x.iso_3166_1 === "IN");
-    const cert = inRel && (inRel.release_dates.find(x => x.certification) || {}).certification;
-    const director = ((d.credits && d.credits.crew) || []).filter(x => x.job === "Director").map(x => x.name).slice(0, 2);
+    const title = d.title || d.name || it.title;
+    const cert = tv ? ((((d.content_ratings || {}).results) || []).find(x => x.iso_3166_1 === "IN") || {}).rating
+      : (((((d.release_dates || {}).results) || []).find(x => x.iso_3166_1 === "IN") || { release_dates: [] }).release_dates.find(x => x.certification) || {}).certification;
+    const makers = tv ? (d.created_by || []).map(x => x.name).slice(0, 2) : ((d.credits && d.credits.crew) || []).filter(x => x.job === "Director").map(x => x.name).slice(0, 2);
     const cast = ((d.credits && d.credits.cast) || []).slice(0, 5).map(x => x.name);
     const vids = (d.videos && d.videos.results) || [];
     const trailer = vids.find(v => v.site === "YouTube" && v.type === "Trailer" && v.official) || vids.find(v => v.site === "YouTube" && v.type === "Trailer") || vids.find(v => v.site === "YouTube" && v.type === "Teaser");
-    const facts = [d.runtime ? `${Math.floor(d.runtime / 60)}h ${d.runtime % 60}m` : "", cert ? `<span class="cert">${esc(cert)}</span>` : "",
-      d.vote_count ? `TMDB ${d.vote_average.toFixed(1)} (${d.vote_count.toLocaleString("en-IN")} votes)` : "", (d.genres || []).map(g => esc(g.name)).join(", ")].filter(Boolean);
-    box.innerHTML = `<div class="facts">${facts.join(" · ")}</div>
+    const mins = tv ? (d.episode_run_time || [])[0] : d.runtime;
+    const facts = [
+      tv && d.number_of_seasons ? `${d.number_of_seasons} season${d.number_of_seasons === 1 ? "" : "s"}` : "",
+      mins ? (tv ? `${mins} min episodes` : `${Math.floor(mins / 60)}h ${mins % 60}m`) : "",
+      cert ? `<span class="cert">${esc(cert)}</span>` : "",
+      d.vote_count ? `TMDB ${d.vote_average.toFixed(1)} (${d.vote_count.toLocaleString("en-IN")} votes)` : "",
+      (d.genres || []).map(g => esc(g.name)).join(", ")].filter(Boolean);
+    const poster = d.poster_path || it.poster;
+    const why = opts.why ? opts.why(d) : null;
+    const where = opts.where ? await whereLine(it.id) : "";
+    box.classList.toggle("has-poster", !!poster);
+    box.innerHTML = `${poster ? `<a class="bigposter-link" href="${IMG}original${poster}" target="_blank" rel="noopener" aria-label="Open the full-size poster for ${esc(title)}">
+        <img class="bigposter" src="${IMG}w500${poster}" alt="Poster for ${esc(title)}"></a>` : ""}
+      <div>
+      <div class="facts">${facts.join(" · ")}</div>
       ${d.overview ? `<p>${esc(d.overview)}</p>` : ""}
-      <div class="people">${director.length ? `<b>Directed by</b> ${esc(listFmt(director))}<br>` : ""}${cast.length ? `<b>With</b> ${esc(listFmt(cast))}` : ""}</div>
-      <h4>Why it matched</h4><ul>${whyMatched(c, d).map(x => `<li>${x}</li>`).join("")}</ul>
-      <h4>Where to watch</h4><div>${await whereLine(m.id) || `<span class="tag">Couldn't check right now</span>`}</div>
+      <div class="people">${makers.length ? `<b>${tv ? "Created by" : "Directed by"}</b> ${esc(listFmt(makers))}<br>` : ""}${cast.length ? `<b>With</b> ${esc(listFmt(cast))}` : ""}</div>
+      ${why ? `<h4>${opts.whyTitle || "Why it matched"}</h4><ul>${why.map(x => `<li>${x}</li>`).join("")}</ul>` : ""}
+      ${opts.where ? `<h4>Where to watch</h4><div>${where || `<span class="tag">Couldn't check right now</span>`}</div>` : ""}
       <div class="row" style="margin-top:12px">
         ${trailer ? `<a class="btn alt tiny" href="https://www.youtube.com/watch?v=${encodeURIComponent(trailer.key)}" target="_blank" rel="noopener">Watch the trailer</a>` : ""}
-        <button type="button" class="btn alt tiny" data-m="find">Full streaming details</button>
+        ${opts.findAttr ? `<button type="button" class="btn alt tiny" ${opts.findAttr}>Full streaming details</button>` : ""}
+      </div>
       </div>`;
+  }
+
+  function toggleDetail(row, c){
+    const open = row.querySelector(".mdetail");
+    row.querySelectorAll('[data-m="more"]').forEach(b => b.setAttribute("aria-expanded", !open));
+    if (open){ open.remove(); return; }
+    row.insertAdjacentHTML("beforeend", `<div class="mdetail"></div>`);
+    const m = c.m;
+    fillDetail(row.querySelector(".mdetail"), { id: m.id, kind: "movie", title: m.title, poster: m.poster_path },
+      { why: d => whyMatched(c, d), where: true, findAttr: 'data-m="find"' });
   }
 
   // plain-language reasons, built from the same profile that scored the film
@@ -2003,11 +2110,12 @@ For each film give: title (the English title as listed on TMDB), original_title,
     deck = "gemini"; current = null;
     show("suggest");
     $("#learnView").hidden = false; $("#tasteView").hidden = true;
-    $("#learnKicker").textContent = "Gemini's picks"; $("#btnEditTaste").hidden = true;
+    $("#learnKicker").textContent = "Gemini's picks"; $("#btnEditTaste").hidden = false; $("#btnEditTaste").textContent = "Back to your taste";
     renderProgress(); advance();
   }
   $("#tabs").addEventListener("click", e => {
     const b = e.target.closest("[data-go]"); if (!b) return;
+    ticketFrom = null;
     if (b.dataset.go === "suggest") openSuggest(); else if (b.dataset.go === "watch") openWatch(); else { show("search"); $("#inQuery").focus(); }
   });
 
