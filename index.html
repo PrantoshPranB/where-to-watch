@@ -1,0 +1,420 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Where to watch (India)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#FFF7EA; --fg:#2B1A3D; --card:#FFFFFF; --line:#E8DCC8; --muted:#6E5F7E;
+  --accent:#F4B030; --on-accent:#2B1A3D; --good:#1E7A6F; --warn:#B8434F; --soft:#F6ECDA;
+  --display:"Bricolage Grotesque", "Avenir Next", "Segoe UI", system-ui, sans-serif;
+  --body:"Atkinson Hyperlegible", "Segoe UI", system-ui, -apple-system, sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#1D1229; --fg:#F6EEDD; --card:#2B1A3D; --line:#45325C; --muted:#B9AACB;
+    --soft:#352349; --good:#4FC1B0; --warn:#F07A86;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#1D1229; --fg:#F6EEDD; --card:#2B1A3D; --line:#45325C; --muted:#B9AACB;
+  --soft:#352349; --good:#4FC1B0; --warn:#F07A86;
+}
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--fg);font:17px/1.55 var(--body);-webkit-font-smoothing:antialiased}
+img{max-width:100%;display:block}
+button,input{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+[hidden]{display:none !important}
+
+.wrap{max-width:680px;margin:0 auto;padding:20px 18px 48px}
+header.top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:28px}
+.brand{font:800 22px/1 var(--display);letter-spacing:-.02em;display:flex;align-items:center;gap:10px}
+.brand .flag{font:700 12px/1 var(--body);background:var(--accent);color:var(--on-accent);padding:5px 8px;border-radius:6px}
+.hello{display:flex;align-items:center;gap:10px;color:var(--muted);font-size:15px}
+
+h1{font:800 clamp(30px,7vw,44px)/1.05 var(--display);letter-spacing:-.03em;margin:0 0 10px}
+h2{font:700 22px/1.2 var(--display);letter-spacing:-.01em;margin:32px 0 12px}
+p.lede{color:var(--muted);margin:0 0 24px;max-width:56ch}
+.small{font-size:14px;color:var(--muted)}
+a{color:inherit;text-underline-offset:3px}
+
+label.field{display:block;margin-bottom:16px}
+label.field span{display:block;font-weight:700;margin-bottom:6px}
+input[type=text],input[type=password],input[type=search]{
+  width:100%;padding:13px 14px;border:2px solid var(--line);border-radius:12px;background:var(--card);
+}
+input:focus{border-color:var(--accent);outline:none}
+.btn{appearance:none;border:0;cursor:pointer;border-radius:12px;padding:13px 20px;font-weight:700;background:var(--fg);color:var(--bg)}
+.btn.alt{background:transparent;color:var(--fg);border:2px solid var(--line);padding:9px 14px;font-size:15px}
+.btn.tiny{padding:7px 12px;font-size:14px;border-radius:9px}
+.btn:disabled{opacity:.5;cursor:default}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.msg{padding:12px 14px;border-radius:12px;background:var(--soft);margin:14px 0}
+.msg.err{border-left:4px solid var(--warn)}
+
+/* streaming app picker */
+.apps{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;margin:14px 0 20px}
+.app{display:flex;align-items:center;gap:10px;padding:10px;border:2px solid var(--line);border-radius:12px;background:var(--card);cursor:pointer;text-align:left;font-size:15px;line-height:1.25}
+.app img{width:36px;height:36px;border-radius:9px;flex:none}
+.app.on{border-color:var(--accent);background:var(--soft)}
+.app.on::after{content:"✓";margin-left:auto;font-weight:700;color:var(--good)}
+.sticky{position:sticky;bottom:0;padding:12px 0;background:linear-gradient(transparent,var(--bg) 30%)}
+
+/* search */
+.searchbar{display:flex;gap:10px}
+.searchbar input{flex:1}
+.options{display:grid;gap:10px}
+.opt{display:grid;grid-template-columns:60px 1fr;gap:14px;padding:12px;border:2px solid var(--line);border-radius:14px;background:var(--card);cursor:pointer;text-align:left;width:100%}
+.opt:hover{border-color:var(--accent)}
+.poster{width:60px;height:90px;border-radius:8px;object-fit:cover;background:var(--soft)}
+.opt .t{font:700 18px/1.2 var(--display)}
+.opt .meta{font-size:14px;color:var(--muted);margin-top:2px}
+.opt .people{font-size:14px;margin-top:6px}
+
+/* the ticket */
+.ticket{margin-top:20px;background:var(--card);border-radius:18px;overflow:hidden;border:2px solid var(--line)}
+.stub{background:var(--accent);color:var(--on-accent);padding:18px 20px 20px}
+.stub .what{font-size:14px;font-weight:700;opacity:.8}
+.stub .verdict{font:800 clamp(22px,5vw,28px)/1.15 var(--display);letter-spacing:-.02em;margin-top:4px}
+.tbody{position:relative;border-top:2px dashed rgba(43,26,61,.4);padding:18px 20px 20px}
+.tbody::before,.tbody::after{content:"";position:absolute;top:-12px;width:22px;height:22px;border-radius:50%;background:var(--bg)}
+.tbody::before{left:-12px}.tbody::after{right:-12px}
+.group{margin-bottom:18px}
+.group h3{font:700 16px/1.3 var(--display);margin:0 0 8px}
+.prov{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--line)}
+.prov:last-child{border-bottom:0}
+.prov img{width:40px;height:40px;border-radius:10px;flex:none}
+.prov .n{font-weight:700;line-height:1.2}
+.prov .tag{font-size:13px;color:var(--muted)}
+.prov .go{margin-left:auto}
+.tag.good{color:var(--good);font-weight:700}
+.tag.warn{color:var(--warn);font-weight:700}
+details{border:2px solid var(--line);border-radius:12px;padding:10px 14px}
+summary{cursor:pointer;font-weight:700}
+footer{margin-top:40px;font-size:13px;color:var(--muted)}
+.spin{display:inline-block;width:18px;height:18px;border:3px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:s .8s linear infinite;vertical-align:-3px;margin-right:8px}
+@keyframes s{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion: reduce){.spin{animation-duration:3s}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="brand">Where to watch <span class="flag">India</span></div>
+    <div class="hello" id="hello" hidden>
+      <span id="helloName"></span>
+      <button class="btn alt tiny" id="btnSettings">Settings</button>
+    </div>
+  </header>
+
+  <!-- Step 1: about you -->
+  <section id="view-setup" hidden>
+    <h1>Let's get you set up</h1>
+    <p class="lede">This takes a minute and is saved only in this browser. Nothing is sent anywhere except movie searches to TMDB.</p>
+    <form id="setupForm">
+      <label class="field"><span>Your name</span>
+        <input type="text" id="inName" autocomplete="given-name" placeholder="Optional">
+      </label>
+      <label class="field"><span>TMDB API key or read access token</span>
+        <input type="password" id="inKey" autocomplete="off" required>
+      </label>
+      <p class="small">Get one free at <a href="https://www.themoviedb.org/settings/api" target="_blank" rel="noopener">themoviedb.org/settings/api</a>. Either the short "API key" or the long "Read access token" works.</p>
+      <div id="setupMsg"></div>
+      <button class="btn" type="submit" id="btnSetup">Continue</button>
+    </form>
+  </section>
+
+  <!-- Step 2: streaming apps -->
+  <section id="view-apps" hidden>
+    <h1>Which apps do you pay for?</h1>
+    <p class="lede">Pick every subscription you have. This list comes live from what's available in India. Results on your apps will show first.</p>
+    <input type="search" id="appFilter" placeholder="Filter apps">
+    <div class="apps" id="appGrid"></div>
+    <div class="sticky row">
+      <button class="btn" id="btnSaveApps">Save apps</button>
+      <span class="small" id="appCount"></span>
+    </div>
+  </section>
+
+  <!-- Step 3: search -->
+  <section id="view-search" hidden>
+    <h1 id="searchHeading">What do you want to watch?</h1>
+    <form class="searchbar" id="searchForm">
+      <input type="search" id="inQuery" placeholder="Movie name" autocomplete="off" required>
+      <button class="btn" type="submit">Find movie</button>
+    </form>
+    <div id="searchMsg"></div>
+    <div id="optionsWrap" hidden>
+      <h2>Which one did you mean?</h2>
+      <div class="options" id="options"></div>
+    </div>
+    <div id="result"></div>
+  </section>
+
+  <footer>
+    Streaming data from <a href="https://www.justwatch.com/in" target="_blank" rel="noopener">JustWatch</a>, via TMDB.
+    This product uses the TMDB API but is not endorsed or certified by TMDB.
+    Availability can lag by a day or two when titles leave a service.
+  </footer>
+</div>
+
+<script>
+(function(){
+  const $ = s => document.querySelector(s);
+  const IMG = "https://image.tmdb.org/t/p/";
+  const REGION = "IN";
+
+  // ---------- storage (local to this browser) ----------
+  const store = {
+    get(k, d){ try{ const v = localStorage.getItem("w2w:"+k); return v ? JSON.parse(v) : d; }catch(e){ return d; } },
+    set(k, v){ try{ localStorage.setItem("w2w:"+k, JSON.stringify(v)); }catch(e){} }
+  };
+  const state = { name: store.get("name",""), key: store.get("key",""), subs: store.get("subs",[]) };
+
+  // ---------- helpers ----------
+  const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  const langName = (() => { try{ const d = new Intl.DisplayNames(["en"],{type:"language"}); return c => { try{ return d.of(c); }catch(e){ return c; } }; }catch(e){ return c => c; } })();
+  // "Netflix Standard with Ads" and "Netflix" are the same subscription family
+  const norm = n => String(n).replace(/\s+with\s+ads$/i,"").replace(/\s+(standard|basic|premium)$/i,"").trim();
+  const isAddon = n => /channel$/i.test(n.trim());
+  const listFmt = arr => arr.length <= 1 ? (arr[0]||"") : arr.slice(0,-1).join(", ") + " and " + arr[arr.length-1];
+  const spinner = t => `<div class="msg"><span class="spin"></span>${esc(t)}</div>`;
+  const errBox = t => `<div class="msg err">${t}</div>`;
+
+  async function tmdb(path, params = {}){
+    const url = new URL("https://api.themoviedb.org/3" + path);
+    Object.entries(params).forEach(([k,v]) => url.searchParams.set(k, v));
+    const headers = { accept: "application/json" };
+    if (state.key.startsWith("eyJ")) headers.Authorization = "Bearer " + state.key;
+    else url.searchParams.set("api_key", state.key);
+    let r;
+    try{ r = await fetch(url, { headers }); }
+    catch(e){ throw new Error("NETWORK"); }
+    if (r.status === 401) throw new Error("KEY");
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    return r.json();
+  }
+  function explain(e){
+    if (e.message === "KEY") return "TMDB rejected the key. Check it in Settings.";
+    if (e.message === "NETWORK") return "Couldn't reach TMDB. Check your internet connection and try again.";
+    return "TMDB returned an error (" + esc(e.message) + "). Try again in a moment.";
+  }
+
+  // ---------- views ----------
+  function show(v){
+    ["setup","apps","search"].forEach(x => $("#view-"+x).hidden = x !== v);
+    const ready = state.key && state.subs.length;
+    $("#hello").hidden = !ready || v !== "search";
+    $("#helloName").textContent = state.name ? "Hi, " + state.name : "";
+    $("#searchHeading").textContent = state.name ? `What do you want to watch, ${state.name}?` : "What do you want to watch?";
+    window.scrollTo(0,0);
+  }
+
+  // ---------- step 1 ----------
+  $("#setupForm").addEventListener("submit", async e => {
+    e.preventDefault();
+    const name = $("#inName").value.trim(), key = $("#inKey").value.trim();
+    state.key = key;
+    $("#btnSetup").disabled = true;
+    $("#setupMsg").innerHTML = spinner("Checking your key");
+    try{
+      await tmdb("/authentication");
+      state.name = name; store.set("name", name); store.set("key", key);
+      $("#setupMsg").innerHTML = "";
+      await openApps();
+    }catch(err){
+      $("#setupMsg").innerHTML = errBox(explain(err));
+    }finally{ $("#btnSetup").disabled = false; }
+  });
+
+  // ---------- step 2 ----------
+  let providers = [], picked = new Set();
+  async function openApps(){
+    show("apps");
+    picked = new Set(state.subs);
+    $("#appGrid").innerHTML = spinner("Loading streaming apps available in India");
+    try{
+      const d = await tmdb("/watch/providers/movie", { watch_region: REGION, language: "en-US" });
+      const map = new Map();
+      d.results.forEach(p => {
+        const n = norm(p.provider_name);
+        const pr = (p.display_priorities && p.display_priorities[REGION]) ?? p.display_priority ?? 999;
+        const ex = map.get(n);
+        if (!ex || pr < ex.pr) map.set(n, { name: n, logo: p.logo_path, pr });
+      });
+      providers = [...map.values()].sort((a,b) => a.pr - b.pr);
+      renderApps();
+    }catch(err){
+      $("#appGrid").innerHTML = errBox(explain(err));
+    }
+  }
+  function renderApps(){
+    const f = $("#appFilter").value.trim().toLowerCase();
+    const list = providers.filter(p => !f || p.name.toLowerCase().includes(f));
+    $("#appGrid").innerHTML = list.map(p => `
+      <button type="button" class="app ${picked.has(p.name) ? "on" : ""}" data-name="${esc(p.name)}" aria-pressed="${picked.has(p.name)}">
+        ${p.logo ? `<img src="${IMG}w92${p.logo}" alt="" loading="lazy">` : ""}
+        <span>${esc(p.name)}</span>
+      </button>`).join("") || `<p class="small">No app matches "${esc(f)}".</p>`;
+    $("#appCount").textContent = picked.size ? `${picked.size} selected` : "Pick at least one";
+    $("#btnSaveApps").disabled = !picked.size;
+  }
+  $("#appGrid").addEventListener("click", e => {
+    const b = e.target.closest(".app"); if (!b) return;
+    const n = b.dataset.name;
+    picked.has(n) ? picked.delete(n) : picked.add(n);
+    renderApps();
+  });
+  $("#appFilter").addEventListener("input", renderApps);
+  $("#btnSaveApps").addEventListener("click", () => {
+    state.subs = [...picked]; store.set("subs", state.subs);
+    show("search"); $("#inQuery").focus();
+  });
+
+  $("#btnSettings").addEventListener("click", () => {
+    $("#inName").value = state.name; $("#inKey").value = state.key;
+    show("setup");
+  });
+
+  // ---------- step 3: find the right movie ----------
+  let candidates = [];
+  $("#searchForm").addEventListener("submit", async e => {
+    e.preventDefault();
+    const q = $("#inQuery").value.trim(); if (!q) return;
+    $("#result").innerHTML = ""; $("#optionsWrap").hidden = true;
+    $("#searchMsg").innerHTML = spinner("Searching");
+    try{
+      const res = await tmdb("/search/movie", { query: q, include_adult: "false", language: "en-US", page: 1 });
+      const top = res.results.slice(0, 8);
+      if (!top.length){ $("#searchMsg").innerHTML = errBox(`No movie found for "${esc(q)}". Check the spelling, or try the original title.`); return; }
+      const det = await Promise.all(top.map(m => tmdb("/movie/" + m.id, { append_to_response: "credits", language: "en-US" }).catch(() => null)));
+      candidates = top.map((m,i) => det[i] || m);
+      $("#searchMsg").innerHTML = "";
+      renderOptions();
+    }catch(err){ $("#searchMsg").innerHTML = errBox(explain(err)); }
+  });
+
+  function movieFacts(m){
+    const year = (m.release_date || "").slice(0,4) || "Year unknown";
+    const bits = [year, m.original_language ? langName(m.original_language) : "", m.runtime ? m.runtime + " min" : ""].filter(Boolean);
+    const crew = (m.credits && m.credits.crew) || [];
+    const directors = crew.filter(c => c.job === "Director").map(c => c.name).slice(0,2);
+    const cast = ((m.credits && m.credits.cast) || []).slice(0,3).map(c => c.name);
+    return { year, meta: bits.join(", "), directors, cast };
+  }
+
+  function renderOptions(){
+    $("#options").innerHTML = candidates.map((m,i) => {
+      const f = movieFacts(m);
+      const orig = m.original_title && m.original_title !== m.title ? ` <span class="small">(${esc(m.original_title)})</span>` : "";
+      return `<button type="button" class="opt" data-i="${i}">
+        ${m.poster_path ? `<img class="poster" src="${IMG}w154${m.poster_path}" alt="" loading="lazy">` : `<div class="poster"></div>`}
+        <div>
+          <div class="t">${esc(m.title)}${orig}</div>
+          <div class="meta">${esc(f.meta)}</div>
+          <div class="people">
+            ${f.directors.length ? `Directed by ${esc(listFmt(f.directors))}<br>` : ""}
+            ${f.cast.length ? `With ${esc(listFmt(f.cast))}` : `<span class="small">Cast not listed</span>`}
+          </div>
+        </div>
+      </button>`;
+    }).join("");
+    $("#optionsWrap").hidden = false;
+  }
+
+  $("#options").addEventListener("click", e => {
+    const b = e.target.closest(".opt"); if (!b) return;
+    lookup(candidates[+b.dataset.i]);
+  });
+
+  // ---------- step 4: where is it streaming in India? ----------
+  const SEARCH_LINKS = {
+    "Netflix": q => "https://www.netflix.com/search?q=" + q,
+    "Amazon Prime Video": q => "https://www.primevideo.com/search?phrase=" + q,
+    "JioHotstar": q => "https://www.hotstar.com/in/explore?search_query=" + q,
+    "Hotstar": q => "https://www.hotstar.com/in/explore?search_query=" + q
+  };
+
+  function dedupe(list){
+    const seen = new Map();
+    list.forEach(p => { const n = norm(p.provider_name); if (!seen.has(n)) seen.set(n, { ...p, name: n }); });
+    return [...seen.values()];
+  }
+
+  async function lookup(m){
+    $("#optionsWrap").hidden = true;
+    $("#result").innerHTML = spinner("Checking streaming apps in India");
+    try{
+      const d = await tmdb(`/movie/${m.id}/watch/providers`);
+      renderResult(m, d.results && d.results[REGION]);
+    }catch(err){ $("#result").innerHTML = errBox(explain(err)); }
+  }
+
+  function provRow(p, tagText, tagClass, title){
+    const link = SEARCH_LINKS[p.name];
+    return `<div class="prov">
+      ${p.logo_path ? `<img src="${IMG}w92${p.logo_path}" alt="">` : ""}
+      <div><div class="n">${esc(p.name)}</div><div class="tag ${tagClass||""}">${tagText}</div></div>
+      ${link ? `<a class="btn alt tiny go" href="${link(encodeURIComponent(title))}" target="_blank" rel="noopener">Search there</a>` : ""}
+    </div>`;
+  }
+
+  function renderResult(m, IN){
+    const f = movieFacts(m);
+    const label = `${m.title} (${f.year})`;
+    const subs = new Set(state.subs);
+    IN = IN || {};
+
+    const flat = dedupe(IN.flatrate || []);
+    const free = dedupe([...(IN.free || []), ...(IN.ads || [])]);
+    const mine = flat.filter(p => subs.has(p.name) && !isAddon(p.name));
+    const others = flat.filter(p => !mine.includes(p));
+    // rent/buy shown only in a clearly separate section
+    const paid = dedupe([...(IN.rent || []), ...(IN.buy || [])]);
+
+    let verdict;
+    if (mine.length) verdict = `Watch it on ${listFmt(mine.map(p => p.name))}. It's included in your subscription.`;
+    else if (free.length) verdict = `Free with ads on ${listFmt(free.map(p => p.name))}.`;
+    else if (others.length) verdict = `Not on your apps. Streaming on ${listFmt(others.map(p => p.name))}.`;
+    else if (paid.length) verdict = "Not streaming on any subscription in India right now. Only rent or buy.";
+    else verdict = "No streaming listing in India.";
+
+    let body = "";
+    if (mine.length) body += `<div class="group"><h3>On your apps</h3>${mine.map(p => provRow(p, "Included in your subscription", "good", m.title)).join("")}</div>`;
+    if (free.length) body += `<div class="group"><h3>Free with ads</h3>${free.map(p => provRow(p, "No subscription needed", "good", m.title)).join("")}</div>`;
+    if (others.length) body += `<div class="group"><h3>Streaming on other apps</h3>${others.map(p => provRow(p,
+        isAddon(p.name) ? "Needs a separate add-on subscription" : "Needs a subscription you haven't selected", "", m.title)).join("")}</div>`;
+    if (!mine.length && !free.length && !others.length && !paid.length)
+      body += `<p>Neither TMDB nor JustWatch lists this movie on any service in India. It may not be released digitally here yet, or the listing hasn't been added.</p>`;
+    if (paid.length) body += `<details><summary>Rent or buy (costs extra, not part of any subscription)</summary>
+        ${paid.map(p => provRow(p, "Pay per movie", "warn", m.title)).join("")}</details>`;
+
+    body += `<div class="row" style="margin-top:18px">
+      ${IN.link ? `<a class="btn tiny" href="${esc(IN.link)}" target="_blank" rel="noopener">Open watch links</a>` : ""}
+      <button class="btn alt tiny" id="btnBack">Pick a different movie</button>
+    </div>
+    <p class="small" style="margin-top:12px">"Open watch links" goes to the India listing with direct links into each app. Check the price in the app before paying for anything.</p>`;
+
+    $("#result").innerHTML = `<article class="ticket">
+      <div class="stub"><div class="what">${esc(label)}</div><div class="verdict">${esc(verdict)}</div></div>
+      <div class="tbody">${body}</div>
+    </article>`;
+    const back = $("#btnBack");
+    if (back) back.addEventListener("click", () => { $("#result").innerHTML = ""; $("#optionsWrap").hidden = false; });
+  }
+
+  // ---------- start ----------
+  if (!state.key) show("setup");
+  else if (!state.subs.length) openApps();
+  else show("search");
+})();
+</script>
+</body>
+</html>
