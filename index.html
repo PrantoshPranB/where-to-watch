@@ -11,18 +11,19 @@
 :root{
   --bg:#FFF7EA; --fg:#2B1A3D; --card:#FFFFFF; --line:#E8DCC8; --muted:#6E5F7E;
   --accent:#F4B030; --on-accent:#2B1A3D; --good:#1E7A6F; --warn:#B8434F; --soft:#F6ECDA;
+  --perf:rgba(43,26,61,.4);
   --display:"Bricolage Grotesque", "Avenir Next", "Segoe UI", system-ui, sans-serif;
   --body:"Atkinson Hyperlegible", "Segoe UI", system-ui, -apple-system, sans-serif;
 }
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
     --bg:#1D1229; --fg:#F6EEDD; --card:#2B1A3D; --line:#45325C; --muted:#B9AACB;
-    --soft:#352349; --good:#4FC1B0; --warn:#F07A86;
+    --soft:#352349; --good:#4FC1B0; --warn:#F07A86; --perf:rgba(246,238,221,.35);
   }
 }
 :root[data-theme="dark"]{
   --bg:#1D1229; --fg:#F6EEDD; --card:#2B1A3D; --line:#45325C; --muted:#B9AACB;
-  --soft:#352349; --good:#4FC1B0; --warn:#F07A86;
+  --soft:#352349; --good:#4FC1B0; --warn:#F07A86; --perf:rgba(246,238,221,.35);
 }
 :root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
 *,*::before,*::after{box-sizing:inherit}
@@ -64,10 +65,17 @@ input:focus{border-color:var(--accent);outline:none}
 .app{display:flex;align-items:center;gap:10px;padding:10px;border:2px solid var(--line);border-radius:12px;background:var(--card);cursor:pointer;text-align:left;font-size:15px;line-height:1.25}
 .app img{width:36px;height:36px;border-radius:9px;flex:none}
 .app.on{border-color:var(--accent);background:var(--soft)}
+.apps > .msg,.apps > p{grid-column:1/-1}
 .app.on::after{content:"✓";margin-left:auto;font-weight:700;color:var(--good)}
 .sticky{position:sticky;bottom:0;padding:12px 0;background:linear-gradient(transparent,var(--bg) 30%)}
 
 /* search */
+.seg{display:inline-flex;gap:3px;padding:3px;margin-bottom:12px;border:2px solid var(--line);border-radius:12px;background:var(--card)}
+.seg label{position:relative}
+.seg input{position:absolute;opacity:0;pointer-events:none}
+.seg span{display:block;padding:7px 14px;border-radius:9px;font-weight:700;font-size:15px;cursor:pointer}
+.seg input:checked+span{background:var(--fg);color:var(--bg)}
+.seg input:focus-visible+span{outline:3px solid var(--accent);outline-offset:2px}
 .searchbar{display:flex;gap:10px}
 .searchbar input{flex:1}
 .options{display:grid;gap:10px}
@@ -83,7 +91,7 @@ input:focus{border-color:var(--accent);outline:none}
 .stub{background:var(--accent);color:var(--on-accent);padding:18px 20px 20px}
 .stub .what{font-size:14px;font-weight:700;opacity:.8}
 .stub .verdict{font:800 clamp(22px,5vw,28px)/1.15 var(--display);letter-spacing:-.02em;margin-top:4px}
-.tbody{position:relative;border-top:2px dashed rgba(43,26,61,.4);padding:18px 20px 20px}
+.tbody{position:relative;border-top:2px dashed var(--perf);padding:18px 20px 20px}
 .tbody::before,.tbody::after{content:"";position:absolute;top:-12px;width:22px;height:22px;border-radius:50%;background:var(--bg)}
 .tbody::before{left:-12px}.tbody::after{right:-12px}
 .group{margin-bottom:18px}
@@ -91,6 +99,7 @@ input:focus{border-color:var(--accent);outline:none}
 .prov{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--line)}
 .prov:last-child{border-bottom:0}
 .prov img{width:40px;height:40px;border-radius:10px;flex:none}
+.prov .badge{width:40px;height:40px;border-radius:10px;flex:none;display:grid;place-items:center;background:var(--soft);font:800 14px/1 var(--display)}
 .prov .n{font-weight:700;line-height:1.2}
 .prov .tag{font-size:13px;color:var(--muted)}
 .prov .go{margin-left:auto}
@@ -117,7 +126,7 @@ footer{margin-top:40px;font-size:13px;color:var(--muted)}
   <!-- Step 1: about you -->
   <section id="view-setup" hidden>
     <h1>Let's get you set up</h1>
-    <p class="lede">This takes a minute and is saved only in this browser. Nothing is sent anywhere except movie searches to TMDB.</p>
+    <p class="lede">This takes a minute and is saved only in this browser. Searches go only to TMDB, and to Internet Archive and Wikimedia Commons to look for free legal copies.</p>
     <form id="setupForm">
       <label class="field"><span>Your name</span>
         <input type="text" id="inName" autocomplete="given-name" placeholder="Optional">
@@ -146,9 +155,15 @@ footer{margin-top:40px;font-size:13px;color:var(--muted)}
   <!-- Step 3: search -->
   <section id="view-search" hidden>
     <h1 id="searchHeading">What do you want to watch?</h1>
-    <form class="searchbar" id="searchForm">
-      <input type="search" id="inQuery" placeholder="Movie name" autocomplete="off" required>
-      <button class="btn" type="submit">Find movie</button>
+    <form id="searchForm">
+      <div class="seg" role="radiogroup" aria-label="Search for">
+        <label><input type="radio" name="kind" value="movie" checked><span>Movies</span></label>
+        <label><input type="radio" name="kind" value="tv"><span>TV shows</span></label>
+      </div>
+      <div class="searchbar">
+        <input type="search" id="inQuery" placeholder="Movie name" autocomplete="off" required>
+        <button class="btn" type="submit">Find</button>
+      </div>
     </form>
     <div id="searchMsg"></div>
     <div id="optionsWrap" hidden>
@@ -160,6 +175,7 @@ footer{margin-top:40px;font-size:13px;color:var(--muted)}
 
   <footer>
     Streaming data from <a href="https://www.justwatch.com/in" target="_blank" rel="noopener">JustWatch</a>, via TMDB.
+    Free copies from <a href="https://archive.org" target="_blank" rel="noopener">Internet Archive</a> and <a href="https://commons.wikimedia.org" target="_blank" rel="noopener">Wikimedia Commons</a>.
     This product uses the TMDB API but is not endorsed or certified by TMDB.
     Availability can lag by a day or two when titles leave a service.
   </footer>
@@ -188,12 +204,12 @@ footer{margin-top:40px;font-size:13px;color:var(--muted)}
   const spinner = t => `<div class="msg"><span class="spin"></span>${esc(t)}</div>`;
   const errBox = t => `<div class="msg err">${t}</div>`;
 
-  async function tmdb(path, params = {}){
+  async function tmdb(path, params = {}, key = state.key){
     const url = new URL("https://api.themoviedb.org/3" + path);
     Object.entries(params).forEach(([k,v]) => url.searchParams.set(k, v));
     const headers = { accept: "application/json" };
-    if (state.key.startsWith("eyJ")) headers.Authorization = "Bearer " + state.key;
-    else url.searchParams.set("api_key", state.key);
+    if (key.startsWith("eyJ")) headers.Authorization = "Bearer " + key;
+    else url.searchParams.set("api_key", key);
     let r;
     try{ r = await fetch(url, { headers }); }
     catch(e){ throw new Error("NETWORK"); }
@@ -221,12 +237,11 @@ footer{margin-top:40px;font-size:13px;color:var(--muted)}
   $("#setupForm").addEventListener("submit", async e => {
     e.preventDefault();
     const name = $("#inName").value.trim(), key = $("#inKey").value.trim();
-    state.key = key;
     $("#btnSetup").disabled = true;
     $("#setupMsg").innerHTML = spinner("Checking your key");
     try{
-      await tmdb("/authentication");
-      state.name = name; store.set("name", name); store.set("key", key);
+      await tmdb("/authentication", {}, key);
+      state.key = key; state.name = name; store.set("name", name); store.set("key", key);
       $("#setupMsg").innerHTML = "";
       await openApps();
     }catch(err){
@@ -241,9 +256,10 @@ footer{margin-top:40px;font-size:13px;color:var(--muted)}
     picked = new Set(state.subs);
     $("#appGrid").innerHTML = spinner("Loading streaming apps available in India");
     try{
-      const d = await tmdb("/watch/providers/movie", { watch_region: REGION, language: "en-US" });
+      const opts = { watch_region: REGION, language: "en-US" };
+      const [mv, tv] = await Promise.all([tmdb("/watch/providers/movie", opts), tmdb("/watch/providers/tv", opts)]);
       const map = new Map();
-      d.results.forEach(p => {
+      [...mv.results, ...tv.results].forEach(p => {
         const n = norm(p.provider_name);
         const pr = (p.display_priorities && p.display_priorities[REGION]) ?? p.display_priority ?? 999;
         const ex = map.get(n);
@@ -252,7 +268,7 @@ footer{margin-top:40px;font-size:13px;color:var(--muted)}
       providers = [...map.values()].sort((a,b) => a.pr - b.pr);
       renderApps();
     }catch(err){
-      $("#appGrid").innerHTML = errBox(explain(err));
+      $("#appGrid").innerHTML = errBox(explain(err) + ` <button type="button" class="btn alt tiny" id="btnRetryApps">Try again</button>`);
     }
   }
   function renderApps(){
@@ -267,6 +283,7 @@ footer{margin-top:40px;font-size:13px;color:var(--muted)}
     $("#btnSaveApps").disabled = !picked.size;
   }
   $("#appGrid").addEventListener("click", e => {
+    if (e.target.closest("#btnRetryApps")) { openApps(); return; }
     const b = e.target.closest(".app"); if (!b) return;
     const n = b.dataset.name;
     picked.has(n) ? picked.delete(n) : picked.add(n);
@@ -283,19 +300,27 @@ footer{margin-top:40px;font-size:13px;color:var(--muted)}
     show("setup");
   });
 
-  // ---------- step 3: find the right movie ----------
+  // ---------- step 3: find the right movie or show ----------
   let candidates = [];
+  const kindNow = () => document.querySelector('input[name="kind"]:checked').value;
+  const noun = k => k === "tv" ? "show" : "movie";
+  // give TV results the same field names as movies
+  const unify = (m, kind) => ({ ...m, kind, title: m.title ?? m.name, original_title: m.original_title ?? m.original_name, release_date: m.release_date ?? m.first_air_date });
+  document.querySelectorAll('input[name="kind"]').forEach(r => r.addEventListener("change", () => {
+    $("#inQuery").placeholder = kindNow() === "tv" ? "Show name" : "Movie name";
+  }));
   $("#searchForm").addEventListener("submit", async e => {
     e.preventDefault();
     const q = $("#inQuery").value.trim(); if (!q) return;
+    const kind = kindNow();
     $("#result").innerHTML = ""; $("#optionsWrap").hidden = true;
     $("#searchMsg").innerHTML = spinner("Searching");
     try{
-      const res = await tmdb("/search/movie", { query: q, include_adult: "false", language: "en-US", page: 1 });
+      const res = await tmdb("/search/" + kind, { query: q, include_adult: "false", language: "en-US", page: 1 });
       const top = res.results.slice(0, 8);
-      if (!top.length){ $("#searchMsg").innerHTML = errBox(`No movie found for "${esc(q)}". Check the spelling, or try the original title.`); return; }
-      const det = await Promise.all(top.map(m => tmdb("/movie/" + m.id, { append_to_response: "credits", language: "en-US" }).catch(() => null)));
-      candidates = top.map((m,i) => det[i] || m);
+      if (!top.length){ $("#searchMsg").innerHTML = errBox(`No ${noun(kind)} found for "${esc(q)}". Check the spelling, or try the original title.`); return; }
+      const det = await Promise.all(top.map(m => tmdb(`/${kind}/${m.id}`, { append_to_response: "credits", language: "en-US" }).catch(() => null)));
+      candidates = top.map((m,i) => unify(det[i] || m, kind));
       $("#searchMsg").innerHTML = "";
       renderOptions();
     }catch(err){ $("#searchMsg").innerHTML = errBox(explain(err)); }
@@ -303,11 +328,14 @@ footer{margin-top:40px;font-size:13px;color:var(--muted)}
 
   function movieFacts(m){
     const year = (m.release_date || "").slice(0,4) || "Year unknown";
-    const bits = [year, m.original_language ? langName(m.original_language) : "", m.runtime ? m.runtime + " min" : ""].filter(Boolean);
+    const tv = m.kind === "tv";
+    const runtime = m.runtime || (m.episode_run_time && m.episode_run_time[0]);
+    const seasons = tv && m.number_of_seasons ? m.number_of_seasons + (m.number_of_seasons === 1 ? " season" : " seasons") : "";
+    const bits = [year, m.original_language ? langName(m.original_language) : "", seasons, runtime ? runtime + " min" + (tv ? " episodes" : "") : ""].filter(Boolean);
     const crew = (m.credits && m.credits.crew) || [];
-    const directors = crew.filter(c => c.job === "Director").map(c => c.name).slice(0,2);
+    const makers = (tv ? (m.created_by || []).map(c => c.name) : crew.filter(c => c.job === "Director").map(c => c.name)).slice(0,2);
     const cast = ((m.credits && m.credits.cast) || []).slice(0,3).map(c => c.name);
-    return { year, meta: bits.join(", "), directors, cast };
+    return { year, meta: bits.join(", "), makers, makerLabel: tv ? "Created by" : "Directed by", cast };
   }
 
   function renderOptions(){
@@ -320,7 +348,7 @@ footer{margin-top:40px;font-size:13px;color:var(--muted)}
           <div class="t">${esc(m.title)}${orig}</div>
           <div class="meta">${esc(f.meta)}</div>
           <div class="people">
-            ${f.directors.length ? `Directed by ${esc(listFmt(f.directors))}<br>` : ""}
+            ${f.makers.length ? `${f.makerLabel} ${esc(listFmt(f.makers))}<br>` : ""}
             ${f.cast.length ? `With ${esc(listFmt(f.cast))}` : `<span class="small">Cast not listed</span>`}
           </div>
         </div>
@@ -348,13 +376,119 @@ footer{margin-top:40px;font-size:13px;color:var(--muted)}
     return [...seen.values()];
   }
 
+  let lookupSeq = 0;
   async function lookup(m){
+    const seq = ++lookupSeq;
     $("#optionsWrap").hidden = true;
     $("#result").innerHTML = spinner("Checking streaming apps in India");
     try{
-      const d = await tmdb(`/movie/${m.id}/watch/providers`);
-      renderResult(m, d.results && d.results[REGION]);
-    }catch(err){ $("#result").innerHTML = errBox(explain(err)); }
+      const d = await tmdb(`/${m.kind}/${m.id}/watch/providers`);
+      if (seq !== lookupSeq) return;
+      const canUpgrade = renderResult(m, d.results && d.results[REGION]);
+      findFreeOnline(m, seq, canUpgrade);
+    }catch(err){ if (seq === lookupSeq) $("#result").innerHTML = errBox(explain(err)); }
+  }
+
+  // ---------- step 5: free, legal copies elsewhere online ----------
+  // Internet Archive hosts lots of user uploads, so only trust items with an open licence
+  // or in Archive's curated public-domain film collections.
+  const IA_TRUSTED = ["feature_films","silent_films","scifi_horror","comedy_films","film_noir","classic_cartoons","prelinger","classic_tv","publicdomainmovies"];
+  const nt = s => String(s || "").toLowerCase().normalize("NFKD").replace(/[\u0300-\u036f]/g,"").replace(/&/g," and ").replace(/[^\p{L}\p{N}]+/gu," ").trim();
+  const titleMatch = (cand, titles) => { const c = " " + nt(cand) + " "; return titles.some(t => { const n = nt(t); return n && c.includes(" " + n + " "); }); };
+  const yearOk = (y, year) => !y || !/^\d{4}$/.test(year) || Math.abs(parseInt(String(y), 10) - +year) <= 1;
+  const titlesOf = m => [...new Set([m.title, m.original_title].filter(Boolean))];
+  // Indian film copyright runs 60 years from the year after release, so a 1955 film is free from 2016.
+  // Uploaders' "public domain" labels are only trusted for films that old; open licences are trusted at any age.
+  const oldEnough = m => { const y = +movieFacts(m).year; return y > 0 && y + 61 <= new Date().getFullYear(); };
+  const PD_LABEL = "Public domain (over 60 years since release)";
+  const minSecs = m => m.kind === "tv" ? 600 : 2400; // skip clips and trailers
+  const toSecs = v => {
+    if (typeof v === "number") return v;
+    const s = String(v || "");
+    if (/^\d+(:\d+){1,2}$/.test(s)) return s.split(":").reduce((a, n) => a * 60 + +n, 0);
+    const n = parseFloat(s); return isNaN(n) ? null : /min/i.test(s) ? n * 60 : n;
+  };
+
+  async function getJSON(url){
+    const r = await fetch(url);
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    return r.json();
+  }
+
+  async function searchArchive(m){
+    const titles = titlesOf(m), year = movieFacts(m).year, old = oldEnough(m);
+    const url = new URL("https://archive.org/advancedsearch.php");
+    url.searchParams.set("q", `(${titles.map(t => `title:("${t.replace(/["\\]/g, "")}")`).join(" OR ")}) AND mediatype:(movies)`);
+    ["identifier","title","year","collection","licenseurl","runtime"].forEach(f => url.searchParams.append("fl[]", f));
+    url.searchParams.set("sort[]", "downloads desc");
+    url.searchParams.set("rows", "50");
+    url.searchParams.set("output", "json");
+    const d = await getJSON(url);
+    return (d.response.docs || []).map(doc => {
+      const lic = String(doc.licenseurl || "");
+      const cols = [].concat(doc.collection || []).map(c => String(c).toLowerCase());
+      const pd = /publicdomain|\/zero\//i.test(lic) || (!lic && cols.some(c => IA_TRUSTED.includes(c)));
+      const rights = /creativecommons/i.test(lic) && !pd ? "Creative Commons licence" : pd && old ? PD_LABEL : "";
+      const secs = toSecs(doc.runtime);
+      return { doc, rights: secs !== null && secs < minSecs(m) ? "" : rights };
+    }).filter(({ doc, rights }) => rights && titleMatch(doc.title, titles) && (m.kind === "tv" || yearOk(doc.year, year)))
+      .slice(0, 4)
+      .map(({ doc, rights }) => ({ badge: "IA", source: "Internet Archive", rights,
+        title: String(doc.title) + (doc.year ? ` (${doc.year})` : ""),
+        href: "https://archive.org/details/" + encodeURIComponent(doc.identifier) }));
+  }
+
+  // everything on Commons is public domain or freely licensed, so only the title needs to match
+  async function searchCommons(m){
+    const titles = titlesOf(m), year = movieFacts(m).year, old = oldEnough(m);
+    const pages = (await Promise.all(titles.map(t => {
+      const url = new URL("https://commons.wikimedia.org/w/api.php");
+      Object.entries({ action: "query", generator: "search", gsrsearch: `"${t.replace(/"/g, "")}" filetype:video`, gsrnamespace: "6", gsrlimit: "10",
+        prop: "videoinfo", viprop: "url|extmetadata|metadata", viextmetadatafilter: "LicenseShortName", format: "json", origin: "*" })
+        .forEach(([k,v]) => url.searchParams.set(k, v));
+      return getJSON(url).then(d => Object.values((d.query && d.query.pages) || {}));
+    }))).flat();
+    const seen = new Set();
+    return pages.map(p => {
+      const name = p.title.replace(/^File:/, "").replace(/\.[a-z0-9]+$/i, "");
+      const info = (p.videoinfo && p.videoinfo[0]) || {};
+      const lic = info.extmetadata && info.extmetadata.LicenseShortName ? info.extmetadata.LicenseShortName.value.replace(/<[^>]*>/g, "") : "Free licence";
+      const len = (info.metadata || []).find(x => x.name === "playtime_seconds" || x.name === "length"); // webm / ogv
+      return { name, href: info.descriptionurl, lic, secs: len ? +len.value : null };
+    }).filter(r => {
+      if (!r.href || seen.has(r.href) || !titleMatch(r.name, titles)) return false;
+      if (r.secs !== null && r.secs < minSecs(m)) return false;
+      // Commons "public domain" usually means US status; only trust it once Indian copyright has run out too
+      if (/public domain|^pd\b/i.test(r.lic)) { if (!old) return false; r.lic = PD_LABEL; }
+      const ys = r.name.match(/\b(18|19|20)\d{2}\b/g);
+      if (m.kind !== "tv" && ys && !ys.some(y => yearOk(y, year))) return false;
+      seen.add(r.href); return true;
+    }).slice(0, 3)
+      .map(r => ({ badge: "WC", source: "Wikimedia Commons", rights: r.lic, title: r.name, href: r.href }));
+  }
+
+  async function findFreeOnline(m, seq, canUpgrade){
+    const [ia, wc] = await Promise.all([searchArchive(m).catch(() => null), searchCommons(m).catch(() => null)]);
+    const box = $("#freeNet");
+    if (seq !== lookupSeq || !box) return;
+    const rows = [...(ia || []), ...(wc || [])];
+    const q = encodeURIComponent(m.title);
+    let html = `<h3>Free and legal online</h3>`;
+    if (rows.length) html += rows.map(r => `<div class="prov">
+        <span class="badge" aria-hidden="true">${r.badge}</span>
+        <div><div class="n">${esc(r.title)}</div><div class="tag good">${esc(r.source)}: ${esc(r.rights)}</div></div>
+        <a class="btn alt tiny go" href="${esc(r.href)}" target="_blank" rel="noopener">Watch</a>
+      </div>`).join("");
+    else if (!ia && !wc) html += `<p class="small">Couldn't reach Internet Archive or Wikimedia Commons. Try the links below.</p>`;
+    else html += `<p class="small">No public-domain or openly licensed copy found on Internet Archive or Wikimedia Commons.</p>`;
+    html += `<div class="row" style="margin-top:8px">
+        <a class="btn alt tiny" href="https://archive.org/search?query=${q}&amp;and%5B%5D=mediatype%3A%22movies%22" target="_blank" rel="noopener">Search Internet Archive</a>
+        <a class="btn alt tiny" href="https://commons.wikimedia.org/w/index.php?title=Special:MediaSearch&amp;type=video&amp;search=${q}" target="_blank" rel="noopener">Search Wikimedia Commons</a>
+      </div>
+      <p class="small" style="margin-top:8px">Shows only copies with an open licence, or labelled public domain and more than 60 years past release (India's copyright term for films). Labels come from the uploader or the site, so check the item's page.</p>`;
+    box.innerHTML = html;
+    if (rows.length && canUpgrade)
+      $("#verdict").textContent = `Free to watch on ${listFmt([...new Set(rows.map(r => r.source))])}, labelled public domain or openly licensed.`;
   }
 
   function provRow(p, tagText, tagClass, title){
@@ -374,7 +508,7 @@ footer{margin-top:40px;font-size:13px;color:var(--muted)}
 
     const flat = dedupe(IN.flatrate || []);
     const free = dedupe([...(IN.free || []), ...(IN.ads || [])]);
-    const mine = flat.filter(p => subs.has(p.name) && !isAddon(p.name));
+    const mine = flat.filter(p => subs.has(p.name));
     const others = flat.filter(p => !mine.includes(p));
     // rent/buy shown only in a clearly separate section
     const paid = dedupe([...(IN.rent || []), ...(IN.buy || [])]);
@@ -392,22 +526,24 @@ footer{margin-top:40px;font-size:13px;color:var(--muted)}
     if (others.length) body += `<div class="group"><h3>Streaming on other apps</h3>${others.map(p => provRow(p,
         isAddon(p.name) ? "Needs a separate add-on subscription" : "Needs a subscription you haven't selected", "", m.title)).join("")}</div>`;
     if (!mine.length && !free.length && !others.length && !paid.length)
-      body += `<p>Neither TMDB nor JustWatch lists this movie on any service in India. It may not be released digitally here yet, or the listing hasn't been added.</p>`;
+      body += `<p>Neither TMDB nor JustWatch lists this ${noun(m.kind)} on any service in India. It may not be released digitally here yet, or the listing hasn't been added.</p>`;
+    body += `<div class="group" id="freeNet">${spinner("Looking for free, legal copies online")}</div>`;
     if (paid.length) body += `<details><summary>Rent or buy (costs extra, not part of any subscription)</summary>
         ${paid.map(p => provRow(p, "Pay per movie", "warn", m.title)).join("")}</details>`;
 
     body += `<div class="row" style="margin-top:18px">
       ${IN.link ? `<a class="btn tiny" href="${esc(IN.link)}" target="_blank" rel="noopener">Open watch links</a>` : ""}
-      <button class="btn alt tiny" id="btnBack">Pick a different movie</button>
+      <button class="btn alt tiny" id="btnBack">Pick a different ${noun(m.kind)}</button>
     </div>
     <p class="small" style="margin-top:12px">"Open watch links" goes to the India listing with direct links into each app. Check the price in the app before paying for anything.</p>`;
 
     $("#result").innerHTML = `<article class="ticket">
-      <div class="stub"><div class="what">${esc(label)}</div><div class="verdict">${esc(verdict)}</div></div>
+      <div class="stub"><div class="what">${esc(label)}</div><div class="verdict" id="verdict">${esc(verdict)}</div></div>
       <div class="tbody">${body}</div>
     </article>`;
     const back = $("#btnBack");
     if (back) back.addEventListener("click", () => { $("#result").innerHTML = ""; $("#optionsWrap").hidden = false; });
+    return !mine.length && !free.length;
   }
 
   // ---------- start ----------
